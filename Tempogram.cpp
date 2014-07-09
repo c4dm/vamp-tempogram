@@ -17,6 +17,7 @@ using namespace std;
 Tempogram::Tempogram(float inputSampleRate) :
     Plugin(inputSampleRate),
     m_blockSize(0),
+    m_stepSize(0),
     compressionConstant(1000), //make param
     previousY(NULL),
     currentY(NULL),
@@ -97,7 +98,6 @@ Tempogram::getPreferredBlockSize() const
 size_t 
 Tempogram::getPreferredStepSize() const
 {
-    //23 ms?
     return 0; // 0 means "anything sensible"; in practice this
               // means the same as the block size for TimeDomain
               // plugins, or half of it for FrequencyDomain plugins
@@ -174,7 +174,7 @@ void
 Tempogram::setParameter(string identifier, float value) 
 {
     if (identifier == "C") {
-        compressionConstant = value;// set the actual value of your parameter
+        compressionConstant = value; // set the actual value of your parameter
     }
     if (identifier == "tN") {
         tN = value;
@@ -210,21 +210,36 @@ Tempogram::getOutputDescriptors() const
 
     // See OutputDescriptor documentation for the possibilities here.
     // Every plugin must have at least one output.
-
+    
     OutputDescriptor d;
-    d.identifier = "output";
+    d.identifier = "tempogram";
     d.name = "Cyclic Tempogram";
     d.description = "Cyclic Tempogram";
     d.unit = "";
-    d.hasFixedBinCount = false;
-    //d.binCount = 1;
+    d.hasFixedBinCount = true;
+    d.binCount = tN;
     d.hasKnownExtents = false;
     d.isQuantized = false;
-    d.sampleType = OutputDescriptor::VariableSampleRate;
-    d.sampleRate = 0.0;
+    d.sampleType = OutputDescriptor::FixedSampleRate;
+    float d_sampleRate = m_inputSampleRate/(m_stepSize * thopSize);
+    d.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
     d.hasDuration = false;
     list.push_back(d);
 
+    d.identifier = "nc";
+    d.name = "Novelty Curve";
+    d.description = "Novelty Curve";
+    d.unit = "";
+    d.hasFixedBinCount = true;
+    d.binCount = 1;
+    d.hasKnownExtents = false;
+    d.isQuantized = false;
+    d.sampleType = OutputDescriptor::FixedSampleRate;
+    d_sampleRate = m_inputSampleRate/m_stepSize;
+    d.sampleRate = d_sampleRate > 0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
+    d.hasDuration = false;
+    list.push_back(d);
+    
     return list;
 }
 
@@ -236,6 +251,7 @@ Tempogram::initialise(size_t channels, size_t stepSize, size_t blockSize)
 
     // Real initialisation work goes here!
     m_blockSize = blockSize;
+    m_stepSize = stepSize;
     currentY = new float[m_blockSize];
     previousY = new float[m_blockSize];
     
@@ -255,7 +271,6 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     
     FeatureSet featureSet;
     Feature feature;
-    feature.hasTimestamp = false;
     
     const float *in = inputBuffers[0];
     
@@ -312,6 +327,7 @@ Tempogram::getRemainingFeatures()
 {
     //Make sure this is called at the beginning of the function
     initialiseForGRF();
+    FeatureSet featureSet;
     
     vector<float> noveltyCurveLocalAverage(ncLength);
     
@@ -322,23 +338,23 @@ Tempogram::getRemainingFeatures()
     for(int i = 0; i < ncLength; i++){
         noveltyCurve[i] -= noveltyCurveLocalAverage[i];
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
+        Feature ncFeature;
+        ncFeature.values.push_back(noveltyCurve[i]);
+        featureSet[1].push_back(ncFeature);
     }
     
     int i=0;
     WindowFunction::hanning(hannWindowtN, tN);
     
     int index;
-    int start = floor(tN/2 + 0.5);
+    int frameBeginOffset = floor(tN/2 + 0.5);
     int timestampInc = floor((((float)ncTimestamps[1].nsec - ncTimestamps[0].nsec)/1e9)*(thopSize) + 0.5);
     //cout << timestampInc << endl;
     
-    FeatureSet featureSet;
-    
     while(i < ncLength){
         Feature feature;
-        Vamp::RealTime timestamp;
         
-        for (int n = start; n < tN; n++){
+        for (int n = frameBeginOffset; n < tN; n++){
             index = i + n - tN/2;
             assert (index >= 0);
             
@@ -351,26 +367,24 @@ Tempogram::getRemainingFeatures()
             //cout << fftInput[n] << endl;
         }
         if (i+tN/2 > ncLength){
-            timestamp = Vamp::RealTime::fromSeconds(ncTimestamps[i].sec + timestampInc);
+            feature.timestamp = Vamp::RealTime::fromSeconds(ncTimestamps[i].sec + timestampInc);
         }
         else{
-            timestamp = ncTimestamps[i + tN/2];
+            feature.timestamp = ncTimestamps[i + tN/2];
         }
         
         FFT::forward(tN, fftInput, NULL, fftOutputReal, fftOutputImag);
         
         //TODO: sample at logarithmic spacing
         for(int k = 0; k < tN; k++){
-            double fftOutputPower = (fftOutputReal[k]*fftOutputReal[k] + fftOutputImag[k]*fftOutputImag[k]); //Magnitude or power?
-            assert (!isinf(fftOutputPower));
+            float fftOutputPower = (fftOutputReal[k]*fftOutputReal[k] + fftOutputImag[k]*fftOutputImag[k]); //Magnitude or power?
             
             feature.values.push_back(fftOutputPower);
         }
 
         i += thopSize;
-        start = 0;
+        frameBeginOffset = 0;
         
-        feature.timestamp = timestamp;
         feature.hasTimestamp = true;
         featureSet[0].push_back(feature);
     }

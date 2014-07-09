@@ -30,7 +30,7 @@ PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h
 # Edit this to the location of the Vamp plugin SDK, relative to your
 # project directory
 #
-VAMP_SDK_DIR := /usr/local/bin
+VAMP_SDK_DIR := /usr/local/include
 
 
 ## Uncomment these for an OS/X universal binary (32- and 64-bit Intel)
@@ -38,7 +38,7 @@ VAMP_SDK_DIR := /usr/local/bin
 ## Xcode 4 command-line tools.
 
 CXX := g++
-CXXFLAGS := -mmacosx-version-min=10.5 -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
+CXXFLAGS := -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
 PLUGIN_EXT := .dylib
 LDFLAGS := $(CXXFLAGS) -dynamiclib -install_name $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /usr/local/lib/libvamp-sdk.a -exported_symbols_list vamp-plugin.list
 
@@ -95,6 +95,9 @@ $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT): $(PLUGIN_OBJECTS)
 	   $(CXX) -o $@ $^ $(LDFLAGS)
 
 $(PLUGIN_OBJECTS): $(PLUGIN_HEADERS)
+
+install: $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT)
+	cp $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /Library/Audio/Plug-Ins/Vamp
 
 clean:
 	rm -f *.o *.dylib
