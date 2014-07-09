@@ -38,7 +38,7 @@ VAMP_SDK_DIR := /usr/local/include
 ## Xcode 4 command-line tools.
 
 CXX := g++
-CXXFLAGS := -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
+CXXFLAGS := -mmacosx-version-min=10.6 -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
 PLUGIN_EXT := .dylib
 LDFLAGS := $(CXXFLAGS) -dynamiclib -install_name $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /usr/local/lib/libvamp-sdk.a -exported_symbols_list vamp-plugin.list
 
@@ -97,7 +97,7 @@ $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT): $(PLUGIN_OBJECTS)
 $(PLUGIN_OBJECTS): $(PLUGIN_HEADERS)
 
 install: $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT)
-	cp $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /Library/Audio/Plug-Ins/Vamp
+	cp $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) ~/Library/Audio/Plug-Ins/Vamp
 
 clean:
 	rm -f *.o *.dylib

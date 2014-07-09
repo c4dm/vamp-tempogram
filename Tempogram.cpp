@@ -240,6 +240,18 @@ Tempogram::getOutputDescriptors() const
     d.hasDuration = false;
     list.push_back(d);
     
+    d.identifier = "spect";
+    d.name = "spect";
+    d.description = "spect";
+    d.unit = "";
+    d.hasFixedBinCount = true;
+    d.binCount = m_blockSize/2;
+    d.hasKnownExtents = false;
+    d.isQuantized = false;
+    d.sampleType = OutputDescriptor::OneSamplePerStep;
+    d.hasDuration = false;
+    list.push_back(d);
+    
     return list;
 }
 
@@ -274,11 +286,11 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     
     const float *in = inputBuffers[0];
     
-    //Calculate log magnitude
     float sum = 0;
     for (int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
-        currentY[i] = log(1+compressionConstant*magnitude); //should be 1+C*magnitude
+        feature.values.push_back(magnitude);
+        currentY[i] = log(1+compressionConstant*magnitude);
         if(currentY[i] >= previousY[i]){
             sum += (currentY[i] - previousY[i]);
         }
@@ -289,10 +301,12 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     float *tmpY = currentY;
     currentY = previousY;
     previousY = tmpY;
+    tmpY = NULL;
     
     ncTimestamps.push_back(timestamp);
+    featureSet[2].push_back(feature);
     
-    return FeatureSet();
+    return featureSet;
 }
 
 void
@@ -339,17 +353,18 @@ Tempogram::getRemainingFeatures()
         noveltyCurve[i] -= noveltyCurveLocalAverage[i];
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
         Feature ncFeature;
+        ncFeature.hasTimestamp = true;
+        ncFeature.timestamp = ncTimestamps[i];
         ncFeature.values.push_back(noveltyCurve[i]);
         featureSet[1].push_back(ncFeature);
     }
     
-    int i=0;
     WindowFunction::hanning(hannWindowtN, tN);
     
+    int timestampInc = floor((((float)ncTimestamps[1].nsec - ncTimestamps[0].nsec)/1e9)*(thopSize) + 0.5);
+    int i=0;
     int index;
     int frameBeginOffset = floor(tN/2 + 0.5);
-    int timestampInc = floor((((float)ncTimestamps[1].nsec - ncTimestamps[0].nsec)/1e9)*(thopSize) + 0.5);
-    //cout << timestampInc << endl;
     
     while(i < ncLength){
         Feature feature;
