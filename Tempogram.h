@@ -45,6 +45,7 @@ public:
     bool initialise(size_t channels, size_t stepSize, size_t blockSize);
     void initialiseForGRF();
     void cleanupForGRF();
+    vector<float> spectrogramToNoveltyCurve(vector<float> spectrogramData, int numberOfBlocks, int blockSize, float samplingFrequency, FeatureSet * featureSet = NULL);
     void reset();
 
     FeatureSet process(const float *const *inputBuffers,
@@ -57,9 +58,12 @@ protected:
     size_t m_blockSize;
     size_t m_stepSize;
     float compressionConstant;
+    float specMax;
     float *previousY;
     float *currentY;
+    vector<float> specData;
     vector<float> noveltyCurve;
+    float minDB;
     
     unsigned int tN;
     unsigned int thopSize;
@@ -67,7 +71,7 @@ protected:
     double * fftOutputReal;
     double * fftOutputImag;
     
-    int ncLength;
+    int numberOfBlocks;
     int hannN;
     float *hannWindow;
     float *hannWindowtN;

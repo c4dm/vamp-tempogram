@@ -19,14 +19,17 @@ Tempogram::Tempogram(float inputSampleRate) :
     m_blockSize(0),
     m_stepSize(0),
     compressionConstant(1000), //make param
+    specMax(0),
     previousY(NULL),
     currentY(NULL),
+    minDB(0),
     tN(1024), //make param
     thopSize(512), //make param
     fftInput(NULL),
     fftOutputReal(NULL),
     fftOutputImag(NULL),
-    ncLength(0)
+    numberOfBlocks(0),
+    hannN(0)
 
     // Also be sure to set your plugin parameters (presumably stored
     // in member variables) to their default values here -- the host
@@ -266,6 +269,7 @@ Tempogram::initialise(size_t channels, size_t stepSize, size_t blockSize)
     m_stepSize = stepSize;
     currentY = new float[m_blockSize];
     previousY = new float[m_blockSize];
+    minDB = pow((float)10,(float)-74/20);
     
     return true;
 }
@@ -285,24 +289,17 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     Feature feature;
     
     const float *in = inputBuffers[0];
-    
-    float sum = 0;
+
     for (int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
+        magnitude = magnitude > minDB ? magnitude : minDB;
+        specData.push_back(magnitude);
         feature.values.push_back(magnitude);
-        currentY[i] = log(1+compressionConstant*magnitude);
-        if(currentY[i] >= previousY[i]){
-            sum += (currentY[i] - previousY[i]);
-        }
+        
+        specMax = specMax > magnitude ? specMax : magnitude;
     }
     
-    noveltyCurve.push_back(sum);
-    
-    float *tmpY = currentY;
-    currentY = previousY;
-    previousY = tmpY;
-    tmpY = NULL;
-    
+    numberOfBlocks++;
     ncTimestamps.push_back(timestamp);
     featureSet[2].push_back(feature);
     
@@ -317,7 +314,6 @@ Tempogram::initialiseForGRF(){
     fftInput = new double[tN];
     fftOutputReal = new double[tN];
     fftOutputImag = new double[tN];
-    ncLength = noveltyCurve.size();
     
     WindowFunction::hanning(hannWindow, hannN, true);
 }
@@ -336,6 +332,64 @@ Tempogram::cleanupForGRF(){
     fftOutputImag = NULL;
 }
 
+vector<float>
+Tempogram::spectrogramToNoveltyCurve(vector<float> spectrogram, int numberOfBlocks, int blockSize, float samplingFrequency, FeatureSet * featureSet){
+    int numberOfBands = 5;
+    
+    for (int block = 0; block < numberOfBlocks; block++){
+        vector<float> sum = vector<float>(numberOfBands);
+        
+        int band = 0;
+        for (int k = 0; k < blockSize; k++){
+            int index = block*blockSize + k;
+            
+            if(index > 500*pow(2.5, band))
+                if(band < numberOfBands)
+                    band++;
+            
+            specData[index] = log(1+compressionConstant*(specData[index]/specMax));
+            
+            float currentY = specData[index];
+            float prevI = index - m_blockSize;
+            float previousY = prevI >= 0 ? specData[prevI] : 0;
+            
+            if(currentY >= previousY){
+                sum[band] += (currentY - previousY);
+            }
+        }
+        
+        float total = 0;
+        for(int band = 0; band < numberOfBands; band++){
+            total += sum[band];
+        }
+        float average = total/numberOfBands;
+        
+        noveltyCurve.push_back(average);
+    }
+    
+    vector<float> noveltyCurveLocalAverage(numberOfBlocks);
+    
+    FIRFilter *filter = new FIRFilter(numberOfBlocks, hannN);
+    filter->process(&noveltyCurve[0], hannWindow, &noveltyCurveLocalAverage[0]);
+    delete filter;
+    
+    for (int i = 0; i < numberOfBlocks; i++){
+        
+        noveltyCurve[i] -= noveltyCurveLocalAverage[i];
+        noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
+        
+        if(featureSet != NULL){
+            Feature ncFeature;
+            ncFeature.hasTimestamp = true;
+            ncFeature.timestamp = ncTimestamps[i];
+            ncFeature.values.push_back(noveltyCurve[i]);
+            (*featureSet)[1].push_back(ncFeature);
+        }
+    }
+    
+    return noveltyCurve;
+}
+
 Tempogram::FeatureSet
 Tempogram::getRemainingFeatures()
 {
@@ -343,45 +397,30 @@ Tempogram::getRemainingFeatures()
     initialiseForGRF();
     FeatureSet featureSet;
     
-    vector<float> noveltyCurveLocalAverage(ncLength);
-    
-    FIRFilter *filter = new FIRFilter(ncLength, hannN);
-    filter->process(&noveltyCurve[0], hannWindow, &noveltyCurveLocalAverage[0]);
-    delete filter;
-    
-    for(int i = 0; i < ncLength; i++){
-        noveltyCurve[i] -= noveltyCurveLocalAverage[i];
-        noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
-        Feature ncFeature;
-        ncFeature.hasTimestamp = true;
-        ncFeature.timestamp = ncTimestamps[i];
-        ncFeature.values.push_back(noveltyCurve[i]);
-        featureSet[1].push_back(ncFeature);
-    }
-    
+    noveltyCurve = spectrogramToNoveltyCurve(specData, numberOfBlocks, m_blockSize, m_inputSampleRate, &featureSet);
     WindowFunction::hanning(hannWindowtN, tN);
     
     int timestampInc = floor((((float)ncTimestamps[1].nsec - ncTimestamps[0].nsec)/1e9)*(thopSize) + 0.5);
-    int i=0;
+    int i = 0;
     int index;
     int frameBeginOffset = floor(tN/2 + 0.5);
     
-    while(i < ncLength){
+    while(i < numberOfBlocks){
         Feature feature;
         
         for (int n = frameBeginOffset; n < tN; n++){
             index = i + n - tN/2;
             assert (index >= 0);
             
-            if(index < ncLength){
+            if(index < numberOfBlocks){
                 fftInput[n] = noveltyCurve[i + n] * hannWindowtN[n];
             }
-            else if(index >= ncLength){
+            else if(index >= numberOfBlocks){
                 fftInput[n] = 0.0; //pad the end with zeros
             }
             //cout << fftInput[n] << endl;
         }
-        if (i+tN/2 > ncLength){
+        if (i+tN/2 > numberOfBlocks){
             feature.timestamp = Vamp::RealTime::fromSeconds(ncTimestamps[i].sec + timestampInc);
         }
         else{
