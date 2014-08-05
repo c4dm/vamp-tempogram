@@ -21,11 +21,11 @@ PLUGIN_LIBRARY_NAME := tempogram
 
 # Edit this to list the .cpp or .c files in your plugin project
 #
-PLUGIN_SOURCES := Tempogram.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp
+PLUGIN_SOURCES := Tempogram.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp NoveltyCurve.cpp
 
 # Edit this to list the .h files in your plugin project
 #
-PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h
+PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h NoveltyCurve.h
 
 # Edit this to the location of the Vamp plugin SDK, relative to your
 # project directory
@@ -39,7 +39,7 @@ VAMP_SDK_DIR := /usr/local/include
 
 CXX := g++
 #-mmacosx-version-min=10.6
-CXXFLAGS := -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
+CXXFLAGS := -mmacosx-version-min=10.6 -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -fPIC
 PLUGIN_EXT := .dylib
 LDFLAGS := $(CXXFLAGS) -dynamiclib -install_name $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /usr/local/lib/libvamp-sdk.a -exported_symbols_list vamp-plugin.list
 

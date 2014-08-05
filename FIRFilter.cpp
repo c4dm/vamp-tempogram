@@ -86,7 +86,6 @@ FIRFilter::process(const float* input, const float* coefficients, float* output)
         output[i] = fftOutputReal[i];
         max = max > output[i] ? max : output[i];
     }
-    //cout << max << endl;
 }
 
 void

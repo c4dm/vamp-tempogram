@@ -7,10 +7,12 @@
 #include "Tempogram.h"
 #include "FIRFilter.h"
 #include "WindowFunction.h"
+#include "NoveltyCurve.h"
 #include <vamp-sdk/FFT.h>
 #include <cmath>
 #include <fstream>
 #include <assert.h>
+
 using Vamp::FFT;
 using namespace std;
 
@@ -22,14 +24,14 @@ Tempogram::Tempogram(float inputSampleRate) :
     specMax(0),
     previousY(NULL),
     currentY(NULL),
+    spectrogram(NULL),
     minDB(0),
-    tN(1024), //make param
-    thopSize(512), //make param
+    tN(256), //make param
+    thopSize(128), //make param
     fftInput(NULL),
     fftOutputReal(NULL),
     fftOutputImag(NULL),
-    numberOfBlocks(0),
-    hannN(0)
+    numberOfBlocks(0)
 
     // Also be sure to set your plugin parameters (presumably stored
     // in member variables) to their default values here -- the host
@@ -271,6 +273,9 @@ Tempogram::initialise(size_t channels, size_t stepSize, size_t blockSize)
     previousY = new float[m_blockSize];
     minDB = pow((float)10,(float)-74/20);
     
+    specData = vector< vector<float> >(m_blockSize/2 + 1);
+    spectrogram = new float * [m_blockSize/2 + 1];
+    
     return true;
 }
 
@@ -283,6 +288,7 @@ Tempogram::reset()
 Tempogram::FeatureSet
 Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
 {
+    
     size_t n = m_blockSize/2 + 1;
     
     FeatureSet featureSet;
@@ -293,10 +299,8 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     for (int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
         magnitude = magnitude > minDB ? magnitude : minDB;
-        specData.push_back(magnitude);
+        specData[i].push_back(magnitude);
         feature.values.push_back(magnitude);
-        
-        specMax = specMax > magnitude ? specMax : magnitude;
     }
     
     numberOfBlocks++;
@@ -308,20 +312,18 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
 
 void
 Tempogram::initialiseForGRF(){
-    hannN = 129;
-    hannWindow = new float[hannN];
     hannWindowtN = new float[tN];
     fftInput = new double[tN];
     fftOutputReal = new double[tN];
     fftOutputImag = new double[tN];
     
-    WindowFunction::hanning(hannWindow, hannN, true);
+    for (int i = 0; i < (m_blockSize/2 + 1); i ++){
+        spectrogram[i] = &specData[i][0];
+    }
 }
 
 void
 Tempogram::cleanupForGRF(){
-    delete []hannWindow;
-    hannWindow = NULL;
     delete []hannWindowtN;
     hannWindowtN = NULL;
     delete []fftInput;
@@ -332,64 +334,6 @@ Tempogram::cleanupForGRF(){
     fftOutputImag = NULL;
 }
 
-vector<float>
-Tempogram::spectrogramToNoveltyCurve(vector<float> spectrogram, int numberOfBlocks, int blockSize, float samplingFrequency, FeatureSet * featureSet){
-    int numberOfBands = 5;
-    
-    for (int block = 0; block < numberOfBlocks; block++){
-        vector<float> sum = vector<float>(numberOfBands);
-        
-        int band = 0;
-        for (int k = 0; k < blockSize; k++){
-            int index = block*blockSize + k;
-            
-            if(index > 500*pow(2.5, band))
-                if(band < numberOfBands)
-                    band++;
-            
-            specData[index] = log(1+compressionConstant*(specData[index]/specMax));
-            
-            float currentY = specData[index];
-            float prevI = index - m_blockSize;
-            float previousY = prevI >= 0 ? specData[prevI] : 0;
-            
-            if(currentY >= previousY){
-                sum[band] += (currentY - previousY);
-            }
-        }
-        
-        float total = 0;
-        for(int band = 0; band < numberOfBands; band++){
-            total += sum[band];
-        }
-        float average = total/numberOfBands;
-        
-        noveltyCurve.push_back(average);
-    }
-    
-    vector<float> noveltyCurveLocalAverage(numberOfBlocks);
-    
-    FIRFilter *filter = new FIRFilter(numberOfBlocks, hannN);
-    filter->process(&noveltyCurve[0], hannWindow, &noveltyCurveLocalAverage[0]);
-    delete filter;
-    
-    for (int i = 0; i < numberOfBlocks; i++){
-        
-        noveltyCurve[i] -= noveltyCurveLocalAverage[i];
-        noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
-        
-        if(featureSet != NULL){
-            Feature ncFeature;
-            ncFeature.hasTimestamp = true;
-            ncFeature.timestamp = ncTimestamps[i];
-            ncFeature.values.push_back(noveltyCurve[i]);
-            (*featureSet)[1].push_back(ncFeature);
-        }
-    }
-    
-    return noveltyCurve;
-}
-
 Tempogram::FeatureSet
 Tempogram::getRemainingFeatures()
 {
@@ -397,19 +341,30 @@ Tempogram::getRemainingFeatures()
     initialiseForGRF();
     FeatureSet featureSet;
     
-    noveltyCurve = spectrogramToNoveltyCurve(specData, numberOfBlocks, m_blockSize, m_inputSampleRate, &featureSet);
+    NoveltyCurve nc(m_inputSampleRate, m_blockSize, numberOfBlocks, compressionConstant);
+    noveltyCurve = nc.spectrogramToNoveltyCurve(spectrogram);
+    
+    for (int i = 0; i < numberOfBlocks; i++){
+        Feature featureNC;
+        cout << "nc:" << noveltyCurve[i] << endl;
+        featureNC.values.push_back(noveltyCurve[i]);
+        featureNC.hasTimestamp = true;
+        featureNC.timestamp = ncTimestamps[i];
+        featureSet[1].push_back(featureNC);
+    }
+    
     WindowFunction::hanning(hannWindowtN, tN);
     
     int timestampInc = floor((((float)ncTimestamps[1].nsec - ncTimestamps[0].nsec)/1e9)*(thopSize) + 0.5);
     int i = 0;
     int index;
-    int frameBeginOffset = floor(tN/2 + 0.5);
+    int frameBeginOffset = thopSize;
     
     while(i < numberOfBlocks){
         Feature feature;
         
         for (int n = frameBeginOffset; n < tN; n++){
-            index = i + n - tN/2;
+            index = i + n - thopSize;
             assert (index >= 0);
             
             if(index < numberOfBlocks){
@@ -418,18 +373,18 @@ Tempogram::getRemainingFeatures()
             else if(index >= numberOfBlocks){
                 fftInput[n] = 0.0; //pad the end with zeros
             }
-            //cout << fftInput[n] << endl;
         }
-        if (i+tN/2 > numberOfBlocks){
+        
+        if (i+thopSize > numberOfBlocks){
             feature.timestamp = Vamp::RealTime::fromSeconds(ncTimestamps[i].sec + timestampInc);
         }
         else{
-            feature.timestamp = ncTimestamps[i + tN/2];
+            feature.timestamp = ncTimestamps[i + thopSize];
         }
         
         FFT::forward(tN, fftInput, NULL, fftOutputReal, fftOutputImag);
         
-        //TODO: sample at logarithmic spacing
+        //@todo: sample at logarithmic spacing? Leave for host?
         for(int k = 0; k < tN; k++){
             float fftOutputPower = (fftOutputReal[k]*fftOutputReal[k] + fftOutputImag[k]*fftOutputImag[k]); //Magnitude or power?
             
