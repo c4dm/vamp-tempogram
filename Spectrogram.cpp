@@ -15,7 +15,7 @@ Spectrogram::Spectrogram(unsigned int inputLength, unsigned int fftLength, unsig
     m_inputLength(inputLength),
     m_fftLength(fftLength),
     m_hopSize(hopSize),
-    m_numberOfOutputBins(floor(fftLength/2 + 0.5) + 1),
+    m_numberOfOutputBins(ceil(fftLength/2) + 1),
     fftInput(NULL),
     fftOutputReal(NULL),
     fftOutputImag(NULL)
@@ -32,7 +32,7 @@ void Spectrogram::initialise(){
     fftOutputReal = new double [m_fftLength];
     fftOutputImag = new double [m_fftLength];
     
-    int numberOfBlocks = ceil(m_inputLength/m_hopSize) + m_fftLength/m_hopSize-1;
+    int numberOfBlocks = ceil(m_inputLength/m_hopSize) + 2*(ceil(m_fftLength/m_hopSize)-1); //The last term corresponds to overlaps at the beginning and end with padded zeros. I.e., if m_hopSize = m_fftLength/2, there'll be 1 overlap at each end. If m_hopSize = m_fftLength/4, there'll be 3 overlaps at each end, etc...
     spectrogramOutput = vector< vector<float> >(m_numberOfOutputBins, vector<float>(numberOfBlocks));
 }
 
@@ -42,8 +42,6 @@ void Spectrogram::cleanup(){
     delete []fftOutputImag;
     
     fftInput = fftOutputReal = fftOutputImag = NULL;
-    
-    cerr << "Spectrogram" << endl;
 }
 
 vector< vector<float> > Spectrogram::audioToMagnitudeSpectrogram(const float * const input, const float * window){
@@ -69,6 +67,7 @@ vector< vector<float> > Spectrogram::audioToMagnitudeSpectrogram(const float * c
         //@todo: sample at logarithmic spacing? Leave for host?
         for(int k = 0; k < m_numberOfOutputBins; k++){
             spectrogramOutput[k][writeBlockPointer] = (fftOutputReal[k]*fftOutputReal[k] + fftOutputImag[k]*fftOutputImag[k]); //Magnitude or power?
+            cerr << writeBlockPointer << " : " << spectrogramOutput[k].size() << endl;
         }
         
         readPointerBeginIndex += m_hopSize;

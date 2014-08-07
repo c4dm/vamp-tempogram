@@ -269,12 +269,12 @@ Tempogram::reset()
     cleanupForGRF();
     ncTimestamps.clear();
     specData.clear();
+    specData = vector< vector<float> >(m_blockSize/2 + 1);
 }
 
 Tempogram::FeatureSet
 Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
 {
-    
     size_t n = m_blockSize/2 + 1;
     
     FeatureSet featureSet;
@@ -337,10 +337,7 @@ Tempogram::getRemainingFeatures()
     WindowFunction::hanning(hannWindowtN, tN);
     Spectrogram * spectrogramProcessor = new Spectrogram(numberOfBlocks, tN, thopSize);
     vector< vector<float> > tempogram = spectrogramProcessor->audioToMagnitudeSpectrogram(&noveltyCurve[0], hannWindowtN);
-    
-    cout << "About to delete..." << endl;
     delete spectrogramProcessor;
-    cout << "Deleted!" << endl;
     spectrogramProcessor = NULL;
     
     int timePointer = thopSize-tN/2;
@@ -350,8 +347,6 @@ Tempogram::getRemainingFeatures()
         Feature feature;
         
         int timeMS = floor(1000*(m_stepSize*timePointer)/m_inputSampleRate + 0.5);
-        
-        cout << timeMS << endl;
         
         for(int k = 0; k < tN/2 + 1; k++){
             feature.values.push_back(tempogram[k][block]);

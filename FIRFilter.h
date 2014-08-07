@@ -20,9 +20,9 @@ public:
     ~FIRFilter();
     void process(const float *input, const float *coefficients, float *output);
 private:
-    unsigned int _lengthInput;
-    unsigned int _numberOfCoefficients;
-    unsigned int _lengthFIRFFT;
+    unsigned int m_lengthInput;
+    unsigned int m_numberOfCoefficients;
+    unsigned int m_lengthFIRFFT;
     
     double *fftInput;
     double *fftCoefficients;
