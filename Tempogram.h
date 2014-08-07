@@ -9,6 +9,14 @@
 #define _TEMPOGRAM_H_
 
 #include <vamp-sdk/Plugin.h>
+#include "FIRFilter.h"
+#include "WindowFunction.h"
+#include "NoveltyCurve.h"
+#include <vamp-sdk/FFT.h>
+#include <cmath>
+#include <fstream>
+#include <assert.h>
+#include "Spectrogram.h"
 
 using std::string;
 using std::vector;
@@ -43,6 +51,7 @@ public:
     OutputList getOutputDescriptors() const;
 
     bool initialise(size_t channels, size_t stepSize, size_t blockSize);
+    void cleanup();
     void initialiseForGRF();
     void cleanupForGRF();
     void reset();
@@ -61,7 +70,6 @@ protected:
     float *previousY;
     float *currentY;
     vector< vector<float> > specData;
-    float ** spectrogram;
     vector<float> noveltyCurve;
     float minDB;
     

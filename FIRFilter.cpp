@@ -7,12 +7,8 @@
 //
 
 #include "FIRFilter.h"
-#include <cmath>
-#include <vamp-sdk/FFT.h>
-#include <assert.h>
-#include <iostream>
-using namespace std;
 
+using namespace std;
 using Vamp::FFT;
 
 FIRFilter::FIRFilter(const unsigned int lengthInput, const unsigned int numberOfCoefficients) :
@@ -61,30 +57,22 @@ FIRFilter::initialise()
 void
 FIRFilter::process(const float* input, const float* coefficients, float* output)
 {
-    float max = 0;
-    for(int i = 0; i < _lengthInput; i++){
-        fftInput[i] = input[i];
-        max = max > fftInput[i] ? max : fftInput[i];
-        //cout << fftInput[i] << endl;
-    }
-    //cout << max << endl;
-    for(int i = 0; i < _numberOfCoefficients; i++){
-        fftCoefficients[i] = coefficients[i];
-        //cout << fftCoefficients[i] << endl;
+    for(int i = 0; i < _lengthFIRFFT; i++){
+        fftInput[i] = i < _lengthInput ? input[i] : 0.0;
+        fftCoefficients[i] = i < _numberOfCoefficients ? coefficients[i] : 0.0;
     }
     
     FFT::forward(_lengthFIRFFT, fftInput, NULL, fftReal1, fftImag1);
     FFT::forward(_lengthFIRFFT, fftCoefficients, NULL, fftReal2, fftImag2);
+    
     for (int i = 0; i < _lengthFIRFFT; i++){
         fftFilteredReal[i] = (fftReal1[i] * fftReal2[i]) - (fftImag1[i] * fftImag2[i]);
         fftFilteredImag[i] = (fftReal1[i] * fftImag2[i]) + (fftReal2[i] * fftImag1[i]);
     }
     FFT::inverse(_lengthFIRFFT, fftFilteredReal, fftFilteredImag, fftOutputReal, fftOutputImag);
     
-    max = 0;
-    for(int i = 0; i < _lengthInput; i++){
+    for (int i = 0; i < _lengthInput; i++){
         output[i] = fftOutputReal[i];
-        max = max > output[i] ? max : output[i];
     }
 }
 
@@ -92,23 +80,14 @@ void
 FIRFilter::cleanup()
 {
     delete []fftInput;
-    fftInput = NULL;
     delete []fftCoefficients;
-    fftCoefficients = NULL;
     delete []fftReal1;
-    fftReal1 = NULL;
     delete []fftImag1;
-    fftImag1 = NULL;
     delete []fftReal2;
-    fftReal2 = NULL;
     delete []fftImag2;
-    fftImag2 = NULL;
     delete []fftFilteredReal;
-    fftFilteredReal = NULL;
     delete []fftFilteredImag;
-    fftFilteredImag = NULL;
     delete []fftOutputReal;
-    fftOutputReal = NULL;
     delete []fftOutputImag;
-    fftOutputImag = NULL;
+    fftInput = fftCoefficients = fftReal1 = fftImag1 = fftReal2 = fftImag2 = fftFilteredReal = fftFilteredImag = fftOutputReal = fftOutputImag = NULL;
 }

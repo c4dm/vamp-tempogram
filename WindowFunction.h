@@ -10,6 +10,8 @@
 #define __Tempogram__WindowFunction__
 
 #include <iostream>
+#include <cmath>
+#include <vector>
 
 class WindowFunction{
 public:

@@ -7,9 +7,6 @@
 //
 
 #include "WindowFunction.h"
-#include <cmath>
-#include <vector>
-#include <iostream>
 using std::vector;
 
 void

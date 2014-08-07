@@ -21,11 +21,11 @@ PLUGIN_LIBRARY_NAME := tempogram
 
 # Edit this to list the .cpp or .c files in your plugin project
 #
-PLUGIN_SOURCES := Tempogram.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp NoveltyCurve.cpp
+PLUGIN_SOURCES := Tempogram.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp NoveltyCurve.cpp Spectrogram.cpp
 
 # Edit this to list the .h files in your plugin project
 #
-PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h NoveltyCurve.h
+PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h NoveltyCurve.h Spectrogram.h
 
 # Edit this to the location of the Vamp plugin SDK, relative to your
 # project directory
@@ -98,6 +98,9 @@ $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT): $(PLUGIN_OBJECTS)
 $(PLUGIN_OBJECTS): $(PLUGIN_HEADERS)
 
 install: $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT)
+	if [ -e ~/Library/Audio/Plug-Ins/Vamp/$(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) ] ; then \
+		rm ~/Library/Audio/Plug-Ins/Vamp/$(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) ;\
+	fi ;\
 	cp $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) ~/Library/Audio/Plug-Ins/Vamp
 
 clean:

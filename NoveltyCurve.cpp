@@ -6,17 +6,13 @@
 //  Copyright (c) 2014 Carl Bussey. All rights reserved.
 //
 
-#include <cmath>
-#include <vector>
-#include <iostream>
-#include "FIRFilter.h"
-#include "WindowFunction.h"
-using namespace std;
 #include "NoveltyCurve.h"
+using namespace std;
 
-NoveltyCurve::NoveltyCurve(float samplingFrequency, int blockSize, int numberOfBlocks, int compressionConstant) :
+NoveltyCurve::NoveltyCurve(float samplingFrequency, int fftLength, int numberOfBlocks, int compressionConstant) :
     m_samplingFrequency(samplingFrequency),
-    m_blockSize(blockSize),
+    m_fftLength(fftLength),
+    m_blockSize(fftLength/2 + 1),
     m_numberOfBlocks(numberOfBlocks),
     m_compressionConstant(compressionConstant),
     m_numberOfBands(5),
@@ -44,14 +40,11 @@ NoveltyCurve::initialise(){
     m_bandBoundaries[0] = 0;
     for (int band = 1; band < m_numberOfBands; band++){
         float lowFreq = 500*pow(2.5, band-1);
-        m_bandBoundaries[band] = m_blockSize*lowFreq/m_samplingFrequency;
+        m_bandBoundaries[band] = m_fftLength*lowFreq/m_samplingFrequency;
     }
-    m_bandBoundaries[m_numberOfBands] = m_blockSize/2 + 1;
+    m_bandBoundaries[m_numberOfBands] = m_blockSize;
     
-    m_bandSum = new float * [m_numberOfBands];
-    for (int i = 0; i < m_numberOfBands; i++){
-        m_bandSum[i] = new float[m_numberOfBlocks];
-    }
+    m_bandSum = new float [m_numberOfBands];
 }
 
 void
@@ -60,80 +53,104 @@ NoveltyCurve::cleanup(){
     m_hannWindow = NULL;
     delete []m_bandBoundaries;
     m_bandBoundaries = NULL;
-    
-    for(int i = 0; i < m_numberOfBands; i++){
-        delete []m_bandSum[i];
-        m_bandSum[i] = NULL;
-    }
     delete []m_bandSum;
     m_bandSum = NULL;
 }
 
-float NoveltyCurve::calculateMax(float ** spectrogram){
-    int specLength = (m_blockSize/2 + 1);
+float NoveltyCurve::calculateMax(vector< vector<float> > &spectrogram){
     float max = 0;
     
     for (int j = 0; j < m_numberOfBlocks; j++){
-        for (int i = 0; i < specLength; i++){
-            max = max > spectrogram[i][j] ? max : spectrogram[i][j];
+        for (int i = 0; i < m_blockSize; i++){
+            max = max > fabs(spectrogram[i][j]) ? max : fabs(spectrogram[i][j]);
         }
     }
     
     return max;
 }
 
-void NoveltyCurve::subtractLocalAverage(float * noveltyCurve){
+void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve){
     vector<float> localAverage(m_numberOfBlocks);
     
     FIRFilter *filter = new FIRFilter(m_numberOfBlocks, m_hannLength);
     filter->process(&noveltyCurve[0], m_hannWindow, &localAverage[0]);
     delete filter;
+    filter = NULL;
     
+    assert(noveltyCurve.size() == m_numberOfBlocks);
     for (int i = 0; i < m_numberOfBlocks; i++){
         noveltyCurve[i] -= localAverage[i];
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
     }
 }
 
+void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, int smoothLength){
+    
+    //need to make new hannWindow!!
+    float * diffHannWindow = new float [smoothLength];
+    WindowFunction::hanning(diffHannWindow, smoothLength, true);
+    
+    if(smoothLength%2) diffHannWindow[(smoothLength+1)/2 - 1] = 0;
+    for(int i = (smoothLength+1)/2; i < smoothLength; i++){
+        diffHannWindow[i] = -diffHannWindow[i];
+    }
+    
+    FIRFilter *smoothFilter = new FIRFilter(m_numberOfBlocks, smoothLength);
+    
+    for (int i = 0; i < m_blockSize; i++){
+        smoothFilter->process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0]);
+    }
+    
+    delete smoothFilter;
+    smoothFilter = NULL;
+}
+
+void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram){ //should this return spectrogram??
+    
+    for (int block = 0; block < m_numberOfBlocks; block++){
+        for (int k = 0; k < m_blockSize; k++){
+            if (spectrogram[k][block] < 0.0) spectrogram[k][block] = 0.0;
+        }
+    }
+}
+
 vector<float>
-NoveltyCurve::spectrogramToNoveltyCurve(float ** spectrogram){
+NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > &spectrogram){
+    
+    assert(spectrogram.size() == m_blockSize);
+    assert(spectrogram[0].size() == m_numberOfBlocks);
     
     float normaliseScale = calculateMax(spectrogram);
     
     for (int block = 0; block < m_numberOfBlocks; block++){
-        
+        for (int k = 0; k < m_blockSize; k++){
+            if(normaliseScale != 0.0) spectrogram[k][block] /= normaliseScale; //normalise
+            spectrogram[k][block] = log(1+m_compressionConstant*spectrogram[k][block]);
+        }
+    }
+
+    smoothedDifferentiator(spectrogram, 5); //make smoothLength a parameter!
+    halfWaveRectify(spectrogram);
+    
+    for (int block = 0; block < m_numberOfBlocks; block++){
         for (int band = 0; band < m_numberOfBands; band++){
-            
-            int specIndex = m_bandBoundaries[band];
+            int k = m_bandBoundaries[band];
             int bandEnd = m_bandBoundaries[band+1];
+            m_bandSum[band] = 0;
             
-            while(specIndex < bandEnd){
-                
-                spectrogram[specIndex][block] /= normaliseScale; //normalise
-                spectrogram[specIndex][block] = log(1+m_compressionConstant*spectrogram[specIndex][block]);
-                
-                int currentY = spectrogram[specIndex][block];
-                int prevBlock = block-1;
-                int previousY = prevBlock >= 0 ? spectrogram[specIndex][prevBlock] : 0;
-                
-                if(currentY > previousY){
-                    m_bandSum[band][block] += (currentY - previousY);
-                }
-                
-                //cout << specIndex << endl;
-                specIndex++;
+            while(k < bandEnd){
+                m_bandSum[band] += spectrogram[k][block];
+                k++;
             }
         }
-        
         float total = 0;
         for(int band = 0; band < m_numberOfBands; band++){
-            total += m_bandSum[band][block];
+            total += m_bandSum[band];
         }
-        float average = total/m_numberOfBands;
-        data[block] = average;
+        data[block] = total/m_numberOfBands;
     }
     
-    subtractLocalAverage(&data[0]);
+    subtractLocalAverage(data);
     
     return data;
 }

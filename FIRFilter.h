@@ -9,6 +9,11 @@
 #ifndef __Tempogram__FIRFilter__
 #define __Tempogram__FIRFilter__
 
+#include <cmath>
+#include <vamp-sdk/FFT.h>
+#include <assert.h>
+#include <iostream>
+
 class FIRFilter{
 public:
     FIRFilter(const unsigned int lengthInput, const unsigned int numberOfCoefficients);

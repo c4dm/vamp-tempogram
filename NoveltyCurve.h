@@ -10,9 +10,16 @@
 #define __Tempogram__NoveltyCurve__
 
 #include <iostream>
+#include <cmath>
+#include <vector>
+#include <iostream>
+#include "FIRFilter.h"
+#include "WindowFunction.h"
+#include <cassert>
 
 class NoveltyCurve{
     float m_samplingFrequency;
+    int m_fftLength;
     int m_blockSize;
     int m_numberOfBlocks;
     int m_compressionConstant;
@@ -20,19 +27,21 @@ class NoveltyCurve{
     int * m_bandBoundaries;
     int m_hannLength;
     float * m_hannWindow;
-    float ** m_bandSum;
+    float * m_bandSum;
     
     void initialise();
     void cleanup();
-    float calculateMax(float ** spectrogram);
-    void subtractLocalAverage(float * noveltyCurve);
+    float calculateMax(std::vector< std::vector<float> > &spectrogram);
+    void subtractLocalAverage(std::vector<float> &noveltyCurve);
+    void smoothedDifferentiator(std::vector< std::vector<float> > &spectrogram, int smoothLength);
+    void halfWaveRectify(std::vector< std::vector<float> > &spectrogram);
     
 public:
-    vector<float> data;
+    std::vector<float> data;
     
-    NoveltyCurve(float samplingFrequency, int blockSize, int numberOfBlocks, int compressionConstant);
+    NoveltyCurve(float samplingFrequency, int fftLength, int numberOfBlocks, int compressionConstant);
     ~NoveltyCurve();
-    vector<float> spectrogramToNoveltyCurve(float ** spectrogram);
+    std::vector<float> spectrogramToNoveltyCurve(std::vector< std::vector<float> > &spectrogram);
 };
 
 #endif /* defined(__Tempogram__NoveltyCurve__) */
