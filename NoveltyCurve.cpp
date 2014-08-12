@@ -18,7 +18,6 @@ NoveltyCurve::NoveltyCurve(float samplingFrequency, int fftLength, int numberOfB
     m_numberOfBands(5),
     m_bandBoundaries(NULL),
     m_hannLength(65),
-    m_hannWindow(NULL),
     m_bandSum(NULL)
 {
     initialise();
@@ -28,15 +27,13 @@ NoveltyCurve::~NoveltyCurve(){
     cleanup();
 }
 
+//allocate all space and set variable
 void
 NoveltyCurve::initialise(){
     data = vector<float>(m_numberOfBlocks);
     
-    m_hannWindow = new float[m_hannLength];
-    WindowFunction::hanning(m_hannWindow, m_hannLength, true);
-    
-    m_bandBoundaries = new int[m_numberOfBands+1]; //make index variable
-    
+    // for bandwise processing, the band is split into 5 bands. m_bandBoundaries contains the upper and lower bin boundaries for each band.
+    m_bandBoundaries = new int[m_numberOfBands+1];
     m_bandBoundaries[0] = 0;
     for (int band = 1; band < m_numberOfBands; band++){
         float lowFreq = 500*pow(2.5, band-1);
@@ -47,16 +44,16 @@ NoveltyCurve::initialise(){
     m_bandSum = new float [m_numberOfBands];
 }
 
+//delete space allocated in initialise()
 void
 NoveltyCurve::cleanup(){
-    delete []m_hannWindow;
-    m_hannWindow = NULL;
     delete []m_bandBoundaries;
     m_bandBoundaries = NULL;
     delete []m_bandSum;
     m_bandSum = NULL;
 }
 
+//calculate max of spectrogram
 float NoveltyCurve::calculateMax(vector< vector<float> > &spectrogram){
     float max = 0;
     
@@ -69,8 +66,13 @@ float NoveltyCurve::calculateMax(vector< vector<float> > &spectrogram){
     return max;
 }
 
+//subtract local average of novelty curve
+//uses m_hannWindow as filter
 void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve){
     vector<float> localAverage(m_numberOfBlocks);
+    
+    float * m_hannWindow = new float[m_hannLength];
+    WindowFunction::hanning(m_hannWindow, m_hannLength, true);
     
     FIRFilter *filter = new FIRFilter(m_numberOfBlocks, m_hannLength);
     filter->process(&noveltyCurve[0], m_hannWindow, &localAverage[0]);
@@ -82,11 +84,14 @@ void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve){
         noveltyCurve[i] -= localAverage[i];
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
     }
+    
+    delete m_hannWindow;
+    m_hannWindow = NULL;
 }
 
+//smoothed differentiator filter. Flips upper half of hanning window about y-axis to create coefficients.
 void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, int smoothLength){
     
-    //need to make new hannWindow!!
     float * diffHannWindow = new float [smoothLength];
     WindowFunction::hanning(diffHannWindow, smoothLength, true);
     
@@ -105,7 +110,8 @@ void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, 
     smoothFilter = NULL;
 }
 
-void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram){ //should this return spectrogram??
+//half rectification (set negative to zero)
+void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram){
     
     for (int block = 0; block < m_numberOfBlocks; block++){
         for (int k = 0; k < m_blockSize; k++){
@@ -114,14 +120,15 @@ void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram){ //shou
     }
 }
 
+//process method
 vector<float>
 NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > &spectrogram){
     
     assert(spectrogram.size() == m_blockSize);
     assert(spectrogram[0].size() == m_numberOfBlocks);
     
+    //normalise and log spectrogram
     float normaliseScale = calculateMax(spectrogram);
-    
     for (int block = 0; block < m_numberOfBlocks; block++){
         for (int k = 0; k < m_blockSize; k++){
             if(normaliseScale != 0.0) spectrogram[k][block] /= normaliseScale; //normalise
@@ -129,9 +136,12 @@ NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > &spectrogram){
         }
     }
 
+    //smooted differentiator
     smoothedDifferentiator(spectrogram, 5); //make smoothLength a parameter!
+    //halfwave rectification
     halfWaveRectify(spectrogram);
     
+    //bandwise processing
     for (int block = 0; block < m_numberOfBlocks; block++){
         for (int band = 0; band < m_numberOfBands; band++){
             int k = m_bandBoundaries[band];
@@ -150,6 +160,7 @@ NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > &spectrogram){
         data[block] = total/m_numberOfBands;
     }
     
+    //subtract local averages
     subtractLocalAverage(data);
     
     return data;

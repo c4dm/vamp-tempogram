@@ -5,6 +5,8 @@
 
 
 #include "Tempogram.h"
+#include <sstream>
+#include <stdexcept>
 
 using Vamp::FFT;
 using Vamp::RealTime;
@@ -14,15 +16,16 @@ Tempogram::Tempogram(float inputSampleRate) :
     Plugin(inputSampleRate),
     m_blockSize(0),
     m_stepSize(0),
-    compressionConstant(1000), //make param
-    specMax(0),
+    compressionConstant(1000), //parameter
     minDB(0),
-    tN(128), //make param
-    thopSize(64), //make param
-    fftInput(NULL),
-    fftOutputReal(NULL),
-    fftOutputImag(NULL),
-    numberOfBlocks(0)
+    windowLength(128), //parameter
+    fftLength(4096), //parameter
+    thopSize(64), //parameter
+    minBPM(30),
+    maxBPM(480),
+    minBin(0), //set in initialise()
+    maxBin(0), //set in initialise()
+    numberOfBlocks(0) //incremented in process()
 
     // Also be sure to set your plugin parameters (presumably stored
     // in member variables) to their default values here -- the host
@@ -89,13 +92,13 @@ Tempogram::getInputDomain() const
 size_t
 Tempogram::getPreferredBlockSize() const
 {
-    return 0; // 0 means "I can handle any block size"
+    return 2048; // 0 means "I can handle any block size"
 }
 
 size_t 
 Tempogram::getPreferredStepSize() const
 {
-    return 0; // 0 means "anything sensible"; in practice this
+    return 1024; // 0 means "anything sensible"; in practice this
               // means the same as the block size for TimeDomain
               // plugins, or half of it for FrequencyDomain plugins
 }
@@ -128,28 +131,49 @@ Tempogram::getParameterDescriptors() const
     // not explicitly set your parameters to their defaults for you if
     // they have not changed in the mean time.
 
-    ParameterDescriptor C;
-    C.identifier = "C";
-    C.name = "C";
-    C.description = "Spectrogram compression constant, C";
-    C.unit = "";
-    C.minValue = 2;
-    C.maxValue = 10000;
-    C.defaultValue = 1000;
-    C.isQuantized = false;
-    list.push_back(C);
+    ParameterDescriptor d;
+    d.identifier = "C";
+    d.name = "C";
+    d.description = "Spectrogram compression constant, C, used when retrieving the novelty curve from the audio.";
+    d.unit = "";
+    d.minValue = 2;
+    d.maxValue = 10000;
+    d.defaultValue = 1000;
+    d.isQuantized = false;
+    list.push_back(d);
+
+    d.identifier = "TN";
+    d.name = "Tempogram Window Length";
+    d.description = "FFT window length when analysing the novelty curve and extracting the tempogram time-frequency function.";
+    d.unit = "";
+    d.minValue = 1024;
+    d.maxValue = 4096;
+    d.defaultValue = 128;
+    d.isQuantized = true;
+    d.quantizeStep = 128;
+    list.push_back(d);
     
-    ParameterDescriptor tN;
-    tN.identifier = "tN";
-    tN.name = "Tempogram FFT length";
-    tN.description = "Tempogram FFT length.";
-    tN.unit = "";
-    tN.minValue = 128;
-    tN.maxValue = 4096;
-    tN.defaultValue = 128;
-    tN.isQuantized = true;
-    tN.quantizeStep = 128;
-    list.push_back(tN);
+    d.identifier = "minBPM";
+    d.name = "Minimum BPM";
+    d.description = "The minimum BPM of the tempogram output bins.";
+    d.unit = "";
+    d.minValue = 0;
+    d.maxValue = 2000;
+    d.defaultValue = 30;
+    d.isQuantized = true;
+    d.quantizeStep = 5;
+    list.push_back(d);
+    
+    d.identifier = "maxBPM";
+    d.name = "Maximum BPM";
+    d.description = "The minimum BPM of the tempogram output bins.";
+    d.unit = "";
+    d.minValue = 30;
+    d.maxValue = 2000;
+    d.defaultValue = 480;
+    d.isQuantized = true;
+    d.quantizeStep = 5;
+    list.push_back(d);
 
     return list;
 }
@@ -160,8 +184,14 @@ Tempogram::getParameter(string identifier) const
     if (identifier == "C") {
         return compressionConstant; // return the ACTUAL current value of your parameter here!
     }
-    if (identifier == "tN"){
-        return tN;
+    if (identifier == "TN"){
+        return windowLength;
+    }
+    if (identifier == "minBPM") {
+        return minBPM;
+    }
+    if (identifier == "maxBPM"){
+        return maxBPM;
     }
     
     return 0;
@@ -170,12 +200,24 @@ Tempogram::getParameter(string identifier) const
 void
 Tempogram::setParameter(string identifier, float value) 
 {
+    
     if (identifier == "C") {
         compressionConstant = value; // set the actual value of your parameter
     }
-    if (identifier == "tN") {
-        tN = value;
+    if (identifier == "TN") {
+        windowLength = value;
     }
+    if (identifier == "minBPM") {
+        minBPM = value;
+    }
+    if (identifier == "maxBPM"){
+        maxBPM = value;
+    }
+    
+}
+
+void Tempogram::updateBPMParameters(){
+
 }
 
 Tempogram::ProgramList
@@ -200,6 +242,14 @@ Tempogram::selectProgram(string name)
 {
 }
 
+string Tempogram::floatToString(float value) const
+{
+    ostringstream ss;
+    
+    if(!(ss << value)) throw runtime_error("Tempogram::floatToString(): invalid conversion from float to string");
+    return ss.str();
+}
+
 Tempogram::OutputList
 Tempogram::getOutputDescriptors() const
 {
@@ -210,18 +260,23 @@ Tempogram::getOutputDescriptors() const
     
     OutputDescriptor d;
     float d_sampleRate;
+    float tempogramInputSampleRate = (float)m_inputSampleRate/m_stepSize;
     
     d.identifier = "tempogram";
     d.name = "Tempogram";
     d.description = "Tempogram";
-    d.unit = "";
+    d.unit = "BPM";
     d.hasFixedBinCount = true;
-    d.binCount = tN/2 + 1;
+    d.binCount = maxBin - minBin + 1;
     d.hasKnownExtents = false;
     d.isQuantized = false;
     d.sampleType = OutputDescriptor::FixedSampleRate;
-    d_sampleRate = m_inputSampleRate/(m_stepSize * thopSize);
+    d_sampleRate = tempogramInputSampleRate/thopSize;
     d.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
+    for(int i = minBin; i <= maxBin; i++){
+        float w = ((float)i/fftLength)*(tempogramInputSampleRate);
+        d.binNames.push_back(floatToString(w*60));
+    }
     d.hasDuration = false;
     list.push_back(d);
     
@@ -234,7 +289,7 @@ Tempogram::getOutputDescriptors() const
     d.hasKnownExtents = false;
     d.isQuantized = false;
     d.sampleType = OutputDescriptor::FixedSampleRate;
-    d_sampleRate = m_inputSampleRate/m_stepSize;
+    d_sampleRate = tempogramInputSampleRate;
     d.sampleRate = d_sampleRate > 0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
     d.hasDuration = false;
     list.push_back(d);
@@ -247,11 +302,19 @@ Tempogram::initialise(size_t channels, size_t stepSize, size_t blockSize)
 {
     if (channels < getMinChannelCount() ||
 	channels > getMaxChannelCount()) return false;
-
+    
     // Real initialisation work goes here!
     m_blockSize = blockSize;
     m_stepSize = stepSize;
     minDB = pow(10,(float)-74/20);
+    
+    if (minBPM > maxBPM){
+        minBPM = 30;
+        maxBPM = 480;
+    }
+    float tempogramInputSampleRate = (float)m_inputSampleRate/m_stepSize;
+    minBin = (unsigned int)(max(floor(((minBPM/60)/tempogramInputSampleRate)*fftLength), (float)0.0));
+    maxBin = (unsigned int)(min(ceil(((maxBPM/60)/tempogramInputSampleRate)*fftLength), (float)fftLength/2));
     
     specData = vector< vector<float> >(m_blockSize/2 + 1);
     
@@ -282,6 +345,7 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     
     const float *in = inputBuffers[0];
 
+    //calculate magnitude of FrequencyDomain input
     for (int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
         magnitude = magnitude > minDB ? magnitude : minDB;
@@ -289,23 +353,17 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     }
     
     numberOfBlocks++;
-    ncTimestamps.push_back(timestamp);
+    ncTimestamps.push_back(timestamp); //save timestamp
 
     return featureSet;
 }
 
 void
 Tempogram::initialiseForGRF(){
-    hannWindowtN = new float[tN];
-    fftInput = new double[tN];
-    fftOutputReal = new double[tN];
-    fftOutputImag = new double[tN];
+    hannWindowtN = new float[windowLength];
     
-    for (int i = 0; i < tN; i ++){
+    for (int i = 0; i < windowLength; i++){
         hannWindowtN[i] = 0.0;
-        fftInput[i] = 0.0;
-        fftOutputReal[i] = 0.0;
-        fftOutputImag[i] = 0.0;
     }
 }
 
@@ -313,8 +371,9 @@ void
 Tempogram::cleanupForGRF(){
     delete []hannWindowtN;
     hannWindowtN = NULL;
-    fftInput = fftOutputReal = fftOutputImag = NULL;
 }
+
+
 
 Tempogram::FeatureSet
 Tempogram::getRemainingFeatures()
@@ -323,9 +382,11 @@ Tempogram::getRemainingFeatures()
     initialiseForGRF();
     FeatureSet featureSet;
     
+    //initialise noveltycurve processor
     NoveltyCurve nc(m_inputSampleRate, m_blockSize, numberOfBlocks, compressionConstant);
-    noveltyCurve = nc.spectrogramToNoveltyCurve(specData);
+    noveltyCurve = nc.spectrogramToNoveltyCurve(specData); //calculate novelty curve from magnitude data
     
+    //push novelty curve data to featureset 1 and set timestamps
     for (int i = 0; i < numberOfBlocks; i++){
         Feature feature;
         feature.values.push_back(noveltyCurve[i]);
@@ -334,21 +395,27 @@ Tempogram::getRemainingFeatures()
         featureSet[1].push_back(feature);
     }
     
-    WindowFunction::hanning(hannWindowtN, tN);
-    Spectrogram * spectrogramProcessor = new Spectrogram(numberOfBlocks, tN, thopSize);
+    //window function for spectrogram
+    WindowFunction::hanning(hannWindowtN,windowLength);
+    
+    //initialise spectrogram processor
+    Spectrogram * spectrogramProcessor = new Spectrogram(numberOfBlocks, windowLength, fftLength, thopSize);
+    //compute spectrogram from novelty curve data (i.e., tempogram)
     vector< vector<float> > tempogram = spectrogramProcessor->audioToMagnitudeSpectrogram(&noveltyCurve[0], hannWindowtN);
     delete spectrogramProcessor;
     spectrogramProcessor = NULL;
     
-    int timePointer = thopSize-tN/2;
+    int timePointer = thopSize-windowLength/2;
     int tempogramLength = tempogram[0].size();
     
+    //push tempogram data to featureset 0 and set timestamps.
     for (int block = 0; block < tempogramLength; block++){
         Feature feature;
         
         int timeMS = floor(1000*(m_stepSize*timePointer)/m_inputSampleRate + 0.5);
         
-        for(int k = 0; k < tN/2 + 1; k++){
+        assert(tempogram.size() == (fftLength/2 + 1));
+        for(int k = minBin; k < maxBin; k++){
             feature.values.push_back(tempogram[k][block]);
         }
         feature.hasTimestamp = true;

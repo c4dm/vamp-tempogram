@@ -3,6 +3,17 @@
 // libraries.  Replace MyPlugin and myPlugin throughout with the name
 // of your first plugin class, and fill in the gaps as appropriate.
 
+//* Should I use initialiseForGRF()? I generally think it's nicer to initialise stuff before processing. It just means that for some reason if somebody needs to process quickly (and have preparation time before) it's a bit easier on the load.
+//* I've taken this approach with NoveltyCurve, Spectrogram and FIRFilter too. Is this a good approach?
+//* The names "cleanUpForGRF()" and "initialise...()" are horrible...
+//* The "m_..." variable name thing (I've been quite inconsitent with that)
+//* Using size_t and not unsigned int?
+//* In Tempogram.h, should the protected methods be private?
+//* NoveltyCurve::NoveltyCurve() calls initialise(). May be overdetermined with amount of info? i.e., constructor takes parameters fftLength, numberOfBlocks... these are dimensions of vector< vector<float> >spectrogram.
+//* When to use function() const?
+//* spectrogram continues for too long? see tempogram output
+//* should WindowFunction::hanning be static? Justification: no initialisation needed (i.e., no need for a constructor!).
+
 
 // Remember to use a different guard symbol in each header!
 #ifndef _TEMPOGRAM_H_
@@ -12,11 +23,13 @@
 #include "FIRFilter.h"
 #include "WindowFunction.h"
 #include "NoveltyCurve.h"
+#include "Spectrogram.h"
 #include <vamp-sdk/FFT.h>
+
 #include <cmath>
 #include <fstream>
-#include <assert.h>
-#include "Spectrogram.h"
+#include <cassert>
+#include <string>
 
 using std::string;
 using std::vector;
@@ -49,11 +62,8 @@ public:
     void selectProgram(string name);
 
     OutputList getOutputDescriptors() const;
-
+    
     bool initialise(size_t channels, size_t stepSize, size_t blockSize);
-    void cleanup();
-    void initialiseForGRF();
-    void cleanupForGRF();
     void reset();
 
     FeatureSet process(const float *const *inputBuffers,
@@ -66,18 +76,27 @@ protected:
     size_t m_blockSize;
     size_t m_stepSize;
     float compressionConstant;
-    float specMax;
     float *previousY;
     float *currentY;
-    vector< vector<float> > specData;
-    vector<float> noveltyCurve;
+    vector< vector<float> > specData; //spectrogram data
+    vector<float> noveltyCurve; //novelty curve data
     float minDB;
     
-    unsigned int tN;
+    void cleanup(); //used to release anything allocated in initialise()
+    void initialiseForGRF(); //used to initialise anything for getRemainingFeatures()
+    void cleanupForGRF(); //used to clean up anything allocated in initialiseForGRF()
+    string floatToString(float value) const;
+    void updateBPMParameters();
+    
+    //FFT params for noveltyCurve -> tempogra
+    unsigned int windowLength;
+    unsigned int fftLength;
     unsigned int thopSize;
-    double * fftInput;
-    double * fftOutputReal;
-    double * fftOutputImag;
+    
+    float minBPM; // tempogram output bin range min
+    float maxBPM; // tempogram output bin range max
+    unsigned int minBin;
+    unsigned int maxBin;
     
     int numberOfBlocks;
     float *hannWindowtN;

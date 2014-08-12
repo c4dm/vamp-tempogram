@@ -14,6 +14,7 @@
 
 class Spectrogram{
     int m_inputLength;
+    int m_windowLength;
     int m_fftLength;
     int m_hopSize;
     int m_numberOfOutputBins;
@@ -26,7 +27,7 @@ class Spectrogram{
     void cleanup();
 public:
     std::vector< std::vector<float> > audioToMagnitudeSpectrogram(const float * const input, const float * window);
-    Spectrogram(unsigned int inputLength, unsigned int fftLength, unsigned int hopSize);
+    Spectrogram(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize);
     ~Spectrogram();
 };
 

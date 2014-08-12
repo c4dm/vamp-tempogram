@@ -26,7 +26,6 @@ class NoveltyCurve{
     int m_numberOfBands;
     int * m_bandBoundaries;
     int m_hannLength;
-    float * m_hannWindow;
     float * m_bandSum;
     
     void initialise();

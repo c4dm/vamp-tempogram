@@ -12,7 +12,6 @@
 #include <cmath>
 #include <vamp-sdk/FFT.h>
 #include <assert.h>
-#include <iostream>
 
 class FIRFilter{
 public:

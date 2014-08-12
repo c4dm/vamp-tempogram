@@ -9,13 +9,13 @@
 #include "WindowFunction.h"
 using std::vector;
 
+//static function
 void
 WindowFunction::hanning(float *signal, const unsigned int N, const bool normalise){
     
     float sum = 0;
     for(int i = 0; i < N; i++){
-        signal[i] = 0.5*(1-cos((float)2*M_PI*i/N));
-        sum += signal[i];
+        sum += signal[i] = 0.5*(1-cos((float)2*M_PI*i/N));
     }
     if (normalise){
         for(int i = 0; i < N; i++){
