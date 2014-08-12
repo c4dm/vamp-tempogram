@@ -14,16 +14,16 @@ using Vamp::FFT;
 FIRFilter::FIRFilter(const unsigned int lengthInput, const unsigned int numberOfCoefficients) :
     m_lengthInput(lengthInput),
     m_numberOfCoefficients(numberOfCoefficients),
-    fftInput(NULL),
-    fftCoefficients(NULL),
-    fftReal1(NULL),
-    fftImag1(NULL),
-    fftReal2(NULL),
-    fftImag2(NULL),
-    fftFilteredReal(NULL),
-    fftFilteredImag(NULL),
-    fftOutputReal(NULL),
-    fftOutputImag(NULL)
+    fftInput(0),
+    fftCoefficients(0),
+    fftReal1(0),
+    fftImag1(0),
+    fftReal2(0),
+    fftImag2(0),
+    fftFilteredReal(0),
+    fftFilteredImag(0),
+    fftOutputReal(0),
+    fftOutputImag(0)
 {
     initialise();
 }
@@ -65,8 +65,8 @@ FIRFilter::process(const float* input, const float* coefficients, float* output)
         fftCoefficients[i] = i < m_numberOfCoefficients ? coefficients[i] : 0.0;
     }
     
-    FFT::forward(m_lengthFIRFFT, fftInput, NULL, fftReal1, fftImag1);
-    FFT::forward(m_lengthFIRFFT, fftCoefficients, NULL, fftReal2, fftImag2);
+    FFT::forward(m_lengthFIRFFT, fftInput, 0, fftReal1, fftImag1);
+    FFT::forward(m_lengthFIRFFT, fftCoefficients, 0, fftReal2, fftImag2);
     
     //Multiply FFT coefficients. Multiplication in freq domain is convolution in time domain.
     for (int i = 0; i < m_lengthFIRFFT; i++){
@@ -95,5 +95,5 @@ FIRFilter::cleanup()
     delete []fftFilteredImag;
     delete []fftOutputReal;
     delete []fftOutputImag;
-    fftInput = fftCoefficients = fftReal1 = fftImag1 = fftReal2 = fftImag2 = fftFilteredReal = fftFilteredImag = fftOutputReal = fftOutputImag = NULL;
+    fftInput = fftCoefficients = fftReal1 = fftImag1 = fftReal2 = fftImag2 = fftFilteredReal = fftFilteredImag = fftOutputReal = fftOutputImag = 0;
 }

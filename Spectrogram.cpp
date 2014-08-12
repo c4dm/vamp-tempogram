@@ -16,9 +16,9 @@ Spectrogram::Spectrogram(unsigned int inputLength, unsigned int windowLength, un
     m_fftLength(fftLength),
     m_hopSize(hopSize),
     m_numberOfOutputBins(ceil(fftLength/2) + 1),
-    fftInput(NULL),
-    fftOutputReal(NULL),
-    fftOutputImag(NULL)
+    fftInput(0),
+    fftOutputReal(0),
+    fftOutputImag(0)
 {
     initialise();
 }
@@ -41,7 +41,7 @@ void Spectrogram::cleanup(){
     delete []fftOutputReal;
     delete []fftOutputImag;
     
-    fftInput = fftOutputReal = fftOutputImag = NULL;
+    fftInput = fftOutputReal = fftOutputImag = 0;
 }
 
 //process method
@@ -66,7 +66,7 @@ vector< vector<float> > Spectrogram::audioToMagnitudeSpectrogram(const float * c
             fftInput[n] = 0.0;
         }
         
-        FFT::forward(m_fftLength, fftInput, NULL, fftOutputReal, fftOutputImag);
+        FFT::forward(m_fftLength, fftInput, 0, fftOutputReal, fftOutputImag);
         
         //@todo: sample at logarithmic spacing? Leave for host?
         for(int k = 0; k < m_numberOfOutputBins; k++){
