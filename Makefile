@@ -30,6 +30,7 @@ PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h NoveltyCurve.h Spectr
 # Edit this to the location of the Vamp plugin SDK, relative to your
 # project directory
 #
+#VAMP_SDK_DIR := ../../vamp-plugin-sdk
 VAMP_SDK_DIR := /usr/local/include
 
 
@@ -65,7 +66,7 @@ LDFLAGS := $(CXXFLAGS) -dynamiclib -install_name $(PLUGIN_LIBRARY_NAME)$(PLUGIN_
 
 ##  Uncomment these for Linux using the standard tools:
 
-# CXXFLAGS := -I$(VAMP_SDK_DIR) -Wall -fPIC
+# CXXFLAGS := -I$(VAMP_SDK_DIR) -Wall -fPIC -g
 # PLUGIN_EXT := .so
 # LDFLAGS := -shared -Wl,-soname=$(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) $(VAMP_SDK_DIR)/libvamp-sdk.a -Wl,--version-script=vamp-plugin.map
 
