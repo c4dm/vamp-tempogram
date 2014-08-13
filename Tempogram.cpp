@@ -329,7 +329,6 @@ void
 Tempogram::reset()
 {
     // Clear buffers, reset stored values, etc
-    cleanupForGRF();
     ncTimestamps.clear();
     specData.clear();
     specData = vector< vector<float> >(m_blockSize/2 + 1);
@@ -358,28 +357,15 @@ Tempogram::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
     return featureSet;
 }
 
-void
-Tempogram::initialiseForGRF(){
-    hannWindowtN = new float[windowLength];
-    
-    for (int i = 0; i < windowLength; i++){
-        hannWindowtN[i] = 0.0;
-    }
-}
-
-void
-Tempogram::cleanupForGRF(){
-    delete []hannWindowtN;
-    hannWindowtN = NULL;
-}
-
-
-
 Tempogram::FeatureSet
 Tempogram::getRemainingFeatures()
 {
-    //Make sure this is called at the beginning of the function
-    initialiseForGRF();
+    
+    float * hannWindowtN = new float[windowLength];
+    for (int i = 0; i < windowLength; i++){
+        hannWindowtN[i] = 0.0;
+    }
+    
     FeatureSet featureSet;
     
     //initialise noveltycurve processor
@@ -399,11 +385,9 @@ Tempogram::getRemainingFeatures()
     WindowFunction::hanning(hannWindowtN,windowLength);
     
     //initialise spectrogram processor
-    Spectrogram * spectrogramProcessor = new Spectrogram(numberOfBlocks, windowLength, fftLength, thopSize);
+    SpectrogramProcessor spectrogramProcessor(numberOfBlocks, windowLength, fftLength, thopSize);
     //compute spectrogram from novelty curve data (i.e., tempogram)
-    vector< vector<float> > tempogram = spectrogramProcessor->audioToMagnitudeSpectrogram(&noveltyCurve[0], hannWindowtN);
-    delete spectrogramProcessor;
-    spectrogramProcessor = NULL;
+    vector< vector<float> > tempogram = spectrogramProcessor.process(&noveltyCurve[0], hannWindowtN);
     
     int timePointer = thopSize-windowLength/2;
     int tempogramLength = tempogram[0].size();
@@ -425,8 +409,10 @@ Tempogram::getRemainingFeatures()
         timePointer += thopSize;
     }
     
-    //Make sure this is called at the end of the function
-    cleanupForGRF();
+    //float func = [](){ cout << "Hello"; };
+    
+    delete []hannWindowtN;
+    hannWindowtN = NULL;
     
     return featureSet;
 }

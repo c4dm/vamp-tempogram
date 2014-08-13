@@ -10,7 +10,7 @@
 using namespace std;
 using Vamp::FFT;
 
-Spectrogram::Spectrogram(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize) :
+SpectrogramProcessor::SpectrogramProcessor(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize) :
     m_inputLength(inputLength),
     m_windowLength(windowLength),
     m_fftLength(fftLength),
@@ -23,11 +23,11 @@ Spectrogram::Spectrogram(unsigned int inputLength, unsigned int windowLength, un
     initialise();
 }
 
-Spectrogram::~Spectrogram(){
+SpectrogramProcessor::~SpectrogramProcessor(){
     cleanup();
 }
 
-void Spectrogram::initialise(){
+void SpectrogramProcessor::initialise(){
     fftInput = new double [m_fftLength];
     fftOutputReal = new double [m_fftLength];
     fftOutputImag = new double [m_fftLength];
@@ -36,7 +36,7 @@ void Spectrogram::initialise(){
     spectrogramOutput = vector< vector<float> >(m_numberOfOutputBins, vector<float>(numberOfBlocks));
 }
 
-void Spectrogram::cleanup(){
+void SpectrogramProcessor::cleanup(){
     delete []fftInput;
     delete []fftOutputReal;
     delete []fftOutputImag;
@@ -45,7 +45,7 @@ void Spectrogram::cleanup(){
 }
 
 //process method
-vector< vector<float> > Spectrogram::audioToMagnitudeSpectrogram(const float * const input, const float * window){
+vector< vector<float> > SpectrogramProcessor::process(const float * const input, const float * window){
     
     int readPointerBeginIndex = m_hopSize-m_windowLength;
     int writeBlockPointer = 0;

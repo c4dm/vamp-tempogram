@@ -11,15 +11,16 @@ using std::vector;
 
 //static function
 void
-WindowFunction::hanning(float *signal, const unsigned int N, const bool normalise){
+WindowFunction::hanning(float *window, const unsigned int N, const bool normalise){
     
     float sum = 0;
     for(int i = 0; i < N; i++){
-        sum += signal[i] = 0.5*(1-cos((float)2*M_PI*i/N));
+        window[i] = 0.5*(1-cos((float)2*M_PI*i/N));
+        sum += window[i];
     }
     if (normalise){
         for(int i = 0; i < N; i++){
-            signal[i] /= sum;
+            window[i] /= sum;
         }
     }
 }

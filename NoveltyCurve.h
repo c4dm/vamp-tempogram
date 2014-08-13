@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Carl Bussey. All rights reserved.
 //
 
+// Don't new delete objects
+
 #ifndef __Tempogram__NoveltyCurve__
 #define __Tempogram__NoveltyCurve__
 
@@ -27,6 +29,7 @@ class NoveltyCurve{
     int * m_bandBoundaries;
     int m_hannLength;
     float * m_bandSum;
+    std::vector<float> data;
     
     void initialise();
     void cleanup();
@@ -36,11 +39,10 @@ class NoveltyCurve{
     void halfWaveRectify(std::vector< std::vector<float> > &spectrogram);
     
 public:
-    std::vector<float> data;
     
     NoveltyCurve(float samplingFrequency, int fftLength, int numberOfBlocks, int compressionConstant);
     ~NoveltyCurve();
-    std::vector<float> spectrogramToNoveltyCurve(std::vector< std::vector<float> > &spectrogram);
+    std::vector<float> spectrogramToNoveltyCurve(std::vector< std::vector<float> > spectrogram);
 };
 
 #endif /* defined(__Tempogram__NoveltyCurve__) */

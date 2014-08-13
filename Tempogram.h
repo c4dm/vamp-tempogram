@@ -83,8 +83,6 @@ protected:
     float minDB;
     
     void cleanup(); //used to release anything allocated in initialise()
-    void initialiseForGRF(); //used to initialise anything for getRemainingFeatures()
-    void cleanupForGRF(); //used to clean up anything allocated in initialiseForGRF()
     string floatToString(float value) const;
     void updateBPMParameters();
     
@@ -99,7 +97,6 @@ protected:
     unsigned int maxBin;
     
     int numberOfBlocks;
-    float *hannWindowtN;
     
     vector<Vamp::RealTime> ncTimestamps;
 };

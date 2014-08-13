@@ -6,7 +6,10 @@
 //  Copyright (c) 2014 Carl Bussey. All rights reserved.
 //
 
+//Spectrogram dimensions should be flipped?
+
 #include "NoveltyCurve.h"
+#include <memory>
 using namespace std;
 
 NoveltyCurve::NoveltyCurve(float samplingFrequency, int fftLength, int numberOfBlocks, int compressionConstant) :
@@ -74,10 +77,8 @@ void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve){
     float * m_hannWindow = new float[m_hannLength];
     WindowFunction::hanning(m_hannWindow, m_hannLength, true);
     
-    FIRFilter *filter = new FIRFilter(m_numberOfBlocks, m_hannLength);
-    filter->process(&noveltyCurve[0], m_hannWindow, &localAverage[0]);
-    delete filter;
-    filter = NULL;
+    FIRFilter filter(m_numberOfBlocks, m_hannLength);
+    filter.process(&noveltyCurve[0], m_hannWindow, &localAverage[0]);
     
     assert(noveltyCurve.size() == m_numberOfBlocks);
     for (int i = 0; i < m_numberOfBlocks; i++){
@@ -85,7 +86,7 @@ void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve){
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
     }
     
-    delete m_hannWindow;
+    delete []m_hannWindow;
     m_hannWindow = NULL;
 }
 
@@ -100,14 +101,11 @@ void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, 
         diffHannWindow[i] = -diffHannWindow[i];
     }
     
-    FIRFilter *smoothFilter = new FIRFilter(m_numberOfBlocks, smoothLength);
+    FIRFilter smoothFilter(m_numberOfBlocks, smoothLength);
     
     for (int i = 0; i < m_blockSize; i++){
-        smoothFilter->process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0]);
+        smoothFilter.process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0]);
     }
-    
-    delete smoothFilter;
-    smoothFilter = NULL;
 }
 
 //half rectification (set negative to zero)
@@ -122,7 +120,7 @@ void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram){
 
 //process method
 vector<float>
-NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > &spectrogram){
+NoveltyCurve::spectrogramToNoveltyCurve(vector< vector<float> > spectrogram){
     
     assert(spectrogram.size() == m_blockSize);
     assert(spectrogram[0].size() == m_numberOfBlocks);

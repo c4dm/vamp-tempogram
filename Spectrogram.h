@@ -12,7 +12,7 @@
 #include <vamp-sdk/FFT.h>
 #include <cmath>
 
-class Spectrogram{
+class SpectrogramProcessor{
     int m_inputLength;
     int m_windowLength;
     int m_fftLength;
@@ -26,9 +26,9 @@ class Spectrogram{
     void initialise();
     void cleanup();
 public:
-    std::vector< std::vector<float> > audioToMagnitudeSpectrogram(const float * const input, const float * window);
-    Spectrogram(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize);
-    ~Spectrogram();
+    std::vector< std::vector<float> > process(const float * const input, const float * window);
+    SpectrogramProcessor(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize);
+    ~SpectrogramProcessor();
 };
 
 #endif /* defined(__Tempogram__Spectrogram__) */
