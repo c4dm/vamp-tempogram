@@ -11,19 +11,19 @@
 using namespace std;
 using Vamp::FFT;
 
-FIRFilter::FIRFilter(const unsigned int lengthInput, const unsigned int numberOfCoefficients) :
+FIRFilter::FIRFilter(const size_t &lengthInput, const size_t &numberOfCoefficients) :
     m_lengthInput(lengthInput),
     m_numberOfCoefficients(numberOfCoefficients),
-    fftInput(0),
-    fftCoefficients(0),
-    fftReal1(0),
-    fftImag1(0),
-    fftReal2(0),
-    fftImag2(0),
-    fftFilteredReal(0),
-    fftFilteredImag(0),
-    fftOutputReal(0),
-    fftOutputImag(0)
+    m_pFftInput(0),
+    m_pFftCoefficients(0),
+    m_pFftReal1(0),
+    m_pFftImag1(0),
+    m_pFftReal2(0),
+    m_pFftImag2(0),
+    m_pFftFilteredReal(0),
+    m_pFftFilteredImag(0),
+    m_pFftOutputReal(0),
+    m_pFftOutputImag(0)
 {
     initialise();
 }
@@ -40,44 +40,45 @@ FIRFilter::initialise()
     //next power of 2
     m_lengthFIRFFT = pow(2,(ceil(log2(m_lengthInput+m_numberOfCoefficients-1))));
     
-    fftInput = new double[m_lengthFIRFFT];
-    fftCoefficients = new double[m_lengthFIRFFT];
-    fftReal1 = new double[m_lengthFIRFFT];
-    fftImag1 = new double[m_lengthFIRFFT];
-    fftReal2 = new double[m_lengthFIRFFT];
-    fftImag2 = new double[m_lengthFIRFFT];
-    fftFilteredReal = new double[m_lengthFIRFFT];
-    fftFilteredImag = new double[m_lengthFIRFFT];
-    fftOutputReal = new double[m_lengthFIRFFT];
-    fftOutputImag = new double[m_lengthFIRFFT];
+    m_pFftInput = new double[m_lengthFIRFFT];
+    m_pFftCoefficients = new double[m_lengthFIRFFT];
+    m_pFftReal1 = new double[m_lengthFIRFFT];
+    m_pFftImag1 = new double[m_lengthFIRFFT];
+    m_pFftReal2 = new double[m_lengthFIRFFT];
+    m_pFftImag2 = new double[m_lengthFIRFFT];
+    m_pFftFilteredReal = new double[m_lengthFIRFFT];
+    m_pFftFilteredImag = new double[m_lengthFIRFFT];
+    m_pFftOutputReal = new double[m_lengthFIRFFT];
+    m_pFftOutputImag = new double[m_lengthFIRFFT];
     
-    for(int i = 0; i < m_lengthFIRFFT; i++){
-        fftInput[i] = fftCoefficients[i] = fftReal1[i] = fftImag1[i] = fftReal2[i] = fftImag2[i] = fftFilteredReal[i] = fftFilteredImag[i] = fftOutputReal[i] = fftOutputImag[i] = 0.0;
+    for(unsigned int i = 0; i < m_lengthFIRFFT; i++){
+        m_pFftInput[i] = m_pFftCoefficients[i] = m_pFftReal1[i] = m_pFftImag1[i] = m_pFftReal2[i] = m_pFftImag2[i] = m_pFftFilteredReal[i] = m_pFftFilteredImag[i] = m_pFftOutputReal[i] = m_pFftOutputImag[i] = 0.0;
     }
 }
 
 void
-FIRFilter::process(const float* input, const float* coefficients, float* output)
+FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutput)
 {
     //Copy to same length FFT buffers
-    for(int i = 0; i < m_lengthFIRFFT; i++){
-        fftInput[i] = i < m_lengthInput ? input[i] : 0.0;
-        fftCoefficients[i] = i < m_numberOfCoefficients ? coefficients[i] : 0.0;
+    for(unsigned int i = 0; i < m_lengthFIRFFT; i++){
+        m_pFftInput[i] = i < m_lengthInput ? pInput[i] : 0.0;
+        m_pFftCoefficients[i] = i < m_numberOfCoefficients ? pCoefficients[i] : 0.0;
     }
     
-    FFT::forward(m_lengthFIRFFT, fftInput, 0, fftReal1, fftImag1);
-    FFT::forward(m_lengthFIRFFT, fftCoefficients, 0, fftReal2, fftImag2);
+    FFT::forward(m_lengthFIRFFT, m_pFftInput, 0, m_pFftReal1, m_pFftImag1);
+    FFT::forward(m_lengthFIRFFT, m_pFftCoefficients, 0, m_pFftReal2, m_pFftImag2);
     
     //Multiply FFT coefficients. Multiplication in freq domain is convolution in time domain.
-    for (int i = 0; i < m_lengthFIRFFT; i++){
-        fftFilteredReal[i] = (fftReal1[i] * fftReal2[i]) - (fftImag1[i] * fftImag2[i]);
-        fftFilteredImag[i] = (fftReal1[i] * fftImag2[i]) + (fftReal2[i] * fftImag1[i]);
+    for (unsigned int i = 0; i < m_lengthFIRFFT; i++){
+        m_pFftFilteredReal[i] = (m_pFftReal1[i] * m_pFftReal2[i]) - (m_pFftImag1[i] * m_pFftImag2[i]);
+        m_pFftFilteredImag[i] = (m_pFftReal1[i] * m_pFftImag2[i]) + (m_pFftReal2[i] * m_pFftImag1[i]);
     }
-    FFT::inverse(m_lengthFIRFFT, fftFilteredReal, fftFilteredImag, fftOutputReal, fftOutputImag);
+    
+    FFT::inverse(m_lengthFIRFFT, m_pFftFilteredReal, m_pFftFilteredImag, m_pFftOutputReal, m_pFftOutputImag);
     
     //copy to output
-    for (int i = 0; i < m_lengthInput; i++){
-        output[i] = fftOutputReal[i];
+    for (unsigned int i = 0; i < m_lengthInput; i++){
+        pOutput[i] = m_pFftOutputReal[i];
     }
 }
 
@@ -85,15 +86,15 @@ FIRFilter::process(const float* input, const float* coefficients, float* output)
 void
 FIRFilter::cleanup()
 {
-    delete []fftInput;
-    delete []fftCoefficients;
-    delete []fftReal1;
-    delete []fftImag1;
-    delete []fftReal2;
-    delete []fftImag2;
-    delete []fftFilteredReal;
-    delete []fftFilteredImag;
-    delete []fftOutputReal;
-    delete []fftOutputImag;
-    fftInput = fftCoefficients = fftReal1 = fftImag1 = fftReal2 = fftImag2 = fftFilteredReal = fftFilteredImag = fftOutputReal = fftOutputImag = 0;
+    delete []m_pFftInput;
+    delete []m_pFftCoefficients;
+    delete []m_pFftReal1;
+    delete []m_pFftImag1;
+    delete []m_pFftReal2;
+    delete []m_pFftImag2;
+    delete []m_pFftFilteredReal;
+    delete []m_pFftFilteredImag;
+    delete []m_pFftOutputReal;
+    delete []m_pFftOutputImag;
+    m_pFftInput = m_pFftCoefficients = m_pFftReal1 = m_pFftImag1 = m_pFftReal2 = m_pFftImag2 = m_pFftFilteredReal = m_pFftFilteredImag = m_pFftOutputReal = m_pFftOutputImag = 0;
 }

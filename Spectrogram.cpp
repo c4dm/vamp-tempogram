@@ -9,16 +9,17 @@
 #include "Spectrogram.h"
 using namespace std;
 using Vamp::FFT;
+#include <iostream>
 
-SpectrogramProcessor::SpectrogramProcessor(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize) :
+SpectrogramProcessor::SpectrogramProcessor(const size_t &inputLength, const size_t &windowLength, const size_t &fftLength, const size_t &hopSize) :
     m_inputLength(inputLength),
     m_windowLength(windowLength),
     m_fftLength(fftLength),
     m_hopSize(hopSize),
     m_numberOfOutputBins(ceil(fftLength/2) + 1),
-    fftInput(0),
-    fftOutputReal(0),
-    fftOutputImag(0)
+    m_pFftInput(0),
+    m_pFftOutputReal(0),
+    m_pFftOutputImag(0)
 {
     initialise();
 }
@@ -28,54 +29,55 @@ SpectrogramProcessor::~SpectrogramProcessor(){
 }
 
 void SpectrogramProcessor::initialise(){
-    fftInput = new double [m_fftLength];
-    fftOutputReal = new double [m_fftLength];
-    fftOutputImag = new double [m_fftLength];
-    
-    int numberOfBlocks = ceil(m_inputLength/m_hopSize) + 2*(ceil(m_windowLength/m_hopSize)-1); //The last term corresponds to overlaps at the beginning and end with padded zeros. I.e., if m_hopSize = m_windowLength/2, there'll be 1 overlap at each end. If m_hopSize = m_windowLength/4, there'll be 3 overlaps at each end, etc...
-    spectrogramOutput = vector< vector<float> >(m_numberOfOutputBins, vector<float>(numberOfBlocks));
+    m_pFftInput = new double [m_fftLength];
+    m_pFftOutputReal = new double [m_fftLength];
+    m_pFftOutputImag = new double [m_fftLength];
 }
 
 void SpectrogramProcessor::cleanup(){
-    delete []fftInput;
-    delete []fftOutputReal;
-    delete []fftOutputImag;
+    delete []m_pFftInput;
+    delete []m_pFftOutputReal;
+    delete []m_pFftOutputImag;
     
-    fftInput = fftOutputReal = fftOutputImag = 0;
+    m_pFftInput = m_pFftOutputReal = m_pFftOutputImag = 0;
 }
 
 //process method
-vector< vector<float> > SpectrogramProcessor::process(const float * const input, const float * window){
+Spectrogram SpectrogramProcessor::process(const float * const pInput, const float * pWindow) const
+{
+    int numberOfBlocks = ceil(m_inputLength/m_hopSize) + 2*(ceil(m_windowLength/m_hopSize)-1); //The last term corresponds to overlaps at the beginning and end with padded zeros. I.e., if m_hopSize = m_windowLength/2, there'll be 1 overlap at each end. If m_hopSize = m_windowLength/4, there'll be 3 overlaps at each end, etc...
+    Spectrogram spectrogram(m_numberOfOutputBins, vector<float>(numberOfBlocks));
     
     int readPointerBeginIndex = m_hopSize-m_windowLength;
-    int writeBlockPointer = 0;
+    unsigned int writeBlockPointer = 0;
     
-    while(readPointerBeginIndex < m_inputLength){
+    while(readPointerBeginIndex < (int)m_inputLength){
         
         int readPointer = readPointerBeginIndex;
-        for (int n = 0; n < m_windowLength; n++){
-            if(readPointer < 0 || readPointer >= m_inputLength){
-                fftInput[n] = 0.0; //pad with zeros
+        for (unsigned int n = 0; n < m_windowLength; n++){
+            if(readPointer < 0 || readPointer >= (int)m_inputLength){
+                m_pFftInput[n] = 0.0; //pad with zeros
             }
             else{
-                fftInput[n] = input[readPointer] * window[n];
+                m_pFftInput[n] = pInput[readPointer] * pWindow[n];
             }
             readPointer++;
         }
-        for (int n = m_windowLength; n < m_fftLength; n++){
-            fftInput[n] = 0.0;
+        for (unsigned int n = m_windowLength; n < m_fftLength; n++){
+            m_pFftInput[n] = 0.0;
         }
         
-        FFT::forward(m_fftLength, fftInput, 0, fftOutputReal, fftOutputImag);
+        FFT::forward(m_fftLength, m_pFftInput, 0, m_pFftOutputReal, m_pFftOutputImag);
         
         //@todo: sample at logarithmic spacing? Leave for host?
-        for(int k = 0; k < m_numberOfOutputBins; k++){
-            spectrogramOutput[k][writeBlockPointer] = (fftOutputReal[k]*fftOutputReal[k] + fftOutputImag[k]*fftOutputImag[k]); //Magnitude or power?
+        for(unsigned int k = 0; k < m_numberOfOutputBins; k++){
+            spectrogram[k][writeBlockPointer] = (m_pFftOutputReal[k]*m_pFftOutputReal[k] + m_pFftOutputImag[k]*m_pFftOutputImag[k]); //Magnitude or power?
+            //std::cout << spectrogram[k][writeBlockPointer] << std::endl;
         }
         
         readPointerBeginIndex += m_hopSize;
         writeBlockPointer++;
     }
     
-    return spectrogramOutput;
+    return spectrogram;
 }

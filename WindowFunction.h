@@ -15,7 +15,7 @@
 
 class WindowFunction{
 public:
-    static void hanning(float *signal, const unsigned int N, const bool normalise = false);
+    static void hanning(float *signal, const unsigned int &N, const bool &normalise = false);
 };
 
 #endif /* defined(__Tempogram__WindowFunction__) */

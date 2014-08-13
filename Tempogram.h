@@ -75,28 +75,27 @@ protected:
     // plugin-specific data and methods go here
     size_t m_blockSize;
     size_t m_stepSize;
-    float compressionConstant;
-    float *previousY;
-    float *currentY;
-    vector< vector<float> > specData; //spectrogram data
-    vector<float> noveltyCurve; //novelty curve data
-    float minDB;
+    float m_compressionConstant;
+    vector< vector<float> > m_spectrogram; //spectrogram data
+    vector<float> m_noveltyCurve; //novelty curve data
+    float m_minDB;
     
     void cleanup(); //used to release anything allocated in initialise()
     string floatToString(float value) const;
     void updateBPMParameters();
     
     //FFT params for noveltyCurve -> tempogra
-    unsigned int windowLength;
-    unsigned int fftLength;
-    unsigned int thopSize;
+    int m_log2WindowLength;
+    size_t m_windowLength;
+    size_t m_fftLength;
+    size_t m_hopSize;
     
-    float minBPM; // tempogram output bin range min
-    float maxBPM; // tempogram output bin range max
-    unsigned int minBin;
-    unsigned int maxBin;
+    float m_minBPM; // tempogram output bin range min
+    float m_maxBPM; // tempogram output bin range max
+    unsigned int m_minBin;
+    unsigned int m_maxBin;
     
-    int numberOfBlocks;
+    unsigned int m_numberOfBlocks;
     
     vector<Vamp::RealTime> ncTimestamps;
 };

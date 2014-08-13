@@ -12,23 +12,26 @@
 #include <vamp-sdk/FFT.h>
 #include <cmath>
 
+typedef std::vector <std::vector<float> > Spectrogram;
+typedef std::vector <std::vector<float> > SpectrogramTransposed;
+
 class SpectrogramProcessor{
-    int m_inputLength;
-    int m_windowLength;
-    int m_fftLength;
-    int m_hopSize;
-    int m_numberOfOutputBins;
-    double * fftInput;
-    double * fftOutputReal;
-    double * fftOutputImag;
-    std::vector< std::vector <float> > spectrogramOutput;
+    size_t m_inputLength;
+    size_t m_windowLength;
+    size_t m_fftLength;
+    size_t m_hopSize;
+    size_t m_numberOfOutputBins;
+    double * m_pFftInput;
+    double * m_pFftOutputReal;
+    double * m_pFftOutputImag;
     
     void initialise();
     void cleanup();
 public:
-    std::vector< std::vector<float> > process(const float * const input, const float * window);
-    SpectrogramProcessor(unsigned int inputLength, unsigned int windowLength, unsigned int fftLength, unsigned int hopSize);
+    SpectrogramProcessor(const size_t &inputLength, const size_t &windowLength, const size_t &fftLength, const size_t &hopSize);
     ~SpectrogramProcessor();
+    
+    std::vector< std::vector<float> > process(const float * const pInput, const float * pWindow) const;
 };
 
 #endif /* defined(__Tempogram__Spectrogram__) */

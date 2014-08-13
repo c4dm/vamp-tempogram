@@ -15,24 +15,24 @@
 
 class FIRFilter{
 public:
-    FIRFilter(const unsigned int lengthInput, const unsigned int numberOfCoefficients);
+    FIRFilter(const size_t &lengthInput, const size_t &numberOfCoefficients);
     ~FIRFilter();
-    void process(const float *input, const float *coefficients, float *output);
+    void process(const float *pInput, const float *pCoefficients, float * pOutput);
 private:
-    unsigned int m_lengthInput;
-    unsigned int m_numberOfCoefficients;
-    unsigned int m_lengthFIRFFT;
+    size_t m_lengthInput;
+    size_t m_numberOfCoefficients;
+    int m_lengthFIRFFT;
     
-    double *fftInput;
-    double *fftCoefficients;
-    double *fftReal1;
-    double *fftImag1;
-    double *fftReal2;
-    double *fftImag2;
-    double *fftFilteredReal;
-    double *fftFilteredImag;
-    double *fftOutputReal;
-    double *fftOutputImag;
+    double *m_pFftInput;
+    double *m_pFftCoefficients;
+    double *m_pFftReal1;
+    double *m_pFftImag1;
+    double *m_pFftReal2;
+    double *m_pFftImag2;
+    double *m_pFftFilteredReal;
+    double *m_pFftFilteredImag;
+    double *m_pFftOutputReal;
+    double *m_pFftOutputImag;
     
     void initialise();
     void cleanup();

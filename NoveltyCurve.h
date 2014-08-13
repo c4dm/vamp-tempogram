@@ -18,6 +18,7 @@
 #include "FIRFilter.h"
 #include "WindowFunction.h"
 #include <cassert>
+#include "Spectrogram.h"
 
 class NoveltyCurve{
     float m_samplingFrequency;
@@ -26,23 +27,21 @@ class NoveltyCurve{
     int m_numberOfBlocks;
     int m_compressionConstant;
     int m_numberOfBands;
-    int * m_bandBoundaries;
-    int m_hannLength;
-    float * m_bandSum;
-    std::vector<float> data;
+    int * m_pBandBoundaries;
+    float * m_pBandSum;
     
     void initialise();
     void cleanup();
-    float calculateMax(std::vector< std::vector<float> > &spectrogram);
-    void subtractLocalAverage(std::vector<float> &noveltyCurve);
-    void smoothedDifferentiator(std::vector< std::vector<float> > &spectrogram, int smoothLength);
-    void halfWaveRectify(std::vector< std::vector<float> > &spectrogram);
+    float calculateMax(const std::vector< std::vector<float> > &spectrogram) const;
+    void subtractLocalAverage(std::vector<float> &noveltyCurve, const size_t &smoothLength) const;
+    void smoothedDifferentiator(std::vector< std::vector<float> > &spectrogram, const size_t &smoothLength) const;
+    void halfWaveRectify(std::vector< std::vector<float> > &spectrogram) const;
     
 public:
     
-    NoveltyCurve(float samplingFrequency, int fftLength, int numberOfBlocks, int compressionConstant);
+    NoveltyCurve(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant);
     ~NoveltyCurve();
-    std::vector<float> spectrogramToNoveltyCurve(std::vector< std::vector<float> > spectrogram);
+    std::vector<float> spectrogramToNoveltyCurve(Spectrogram spectrogram) const;
 };
 
 #endif /* defined(__Tempogram__NoveltyCurve__) */
