@@ -34,6 +34,8 @@
 using std::string;
 using std::vector;
 
+typedef Spectrogram Tempogram;
+
 class TempogramPlugin : public Vamp::Plugin
 {
 public:
@@ -73,31 +75,38 @@ public:
 
 protected:
     // plugin-specific data and methods go here
-    size_t m_blockSize;
-    size_t m_stepSize;
-    float m_compressionConstant;
+    size_t m_inputBlockSize;
+    size_t m_inputStepSize;
     SpectrogramTransposed m_spectrogram; //spectrogram data
     vector<float> m_noveltyCurve; //novelty curve data
-    float m_minDB;
+    float m_noveltyCurveMinDB;
     
     void cleanup(); //used to release anything allocated in initialise()
     string floatToString(float value) const;
+    vector<unsigned int> calculateTempogramNearestNeighbourLogBins() const;
     void updateBPMParameters();
+    int bpmToBin(const float &bpm) const;
     
-    //FFT params for noveltyCurve -> tempogra
-    float m_log2WindowLength;
-    size_t m_windowLength;
-    float m_log2FftLength;
-    size_t m_fftLength;
-    float m_log2HopSize;
-    size_t m_hopSize;
+    //Novelty Curve specific parameters
+    float m_noveltyCurveCompressionConstant;
     
-    float m_minBPM; // tempogram output bin range min
-    float m_maxBPM; // tempogram output bin range max
-    unsigned int m_minBin;
-    unsigned int m_maxBin;
+    //Tempogram specific parameters
+    float m_tempogramLog2WindowLength;
+    size_t m_tempogramWindowLength;
+    float m_tempogramLog2FftLength;
+    size_t m_tempogramFftLength;
+    float m_tempogramLog2HopSize;
+    size_t m_tempogramHopSize;
     
-    vector<Vamp::RealTime> ncTimestamps;
+    float m_tempogramMinBPM; // tempogram output bin range min
+    float m_tempogramMaxBPM; // tempogram output bin range max
+    unsigned int m_tempogramMinBin;
+    unsigned int m_tempogramMaxBin;
+    
+    //Cyclic tempogram parameters
+    float m_cyclicTempogramMinBPM;
+    int m_cyclicTempogramNumberOfOctaves;
+    int m_cyclicTempogramOctaveDivider;
 };
 
 

@@ -14,20 +14,23 @@ using namespace std;
 
 TempogramPlugin::TempogramPlugin(float inputSampleRate) :
     Plugin(inputSampleRate),
-    m_blockSize(0),
-    m_stepSize(0),
-    m_compressionConstant(1000), //parameter
-    m_minDB(0),
-    m_log2WindowLength(10), //parameter
-    m_windowLength(pow((float)2,m_log2WindowLength)),
-    m_log2FftLength(m_log2WindowLength),
-    m_fftLength(m_windowLength),
-    m_log2HopSize(6), //parameter
-    m_hopSize(pow((float)2,m_log2HopSize)),
-    m_minBPM(30),
-    m_maxBPM(480),
-    m_minBin(0), //set in initialise()
-    m_maxBin(0) //set in initialise()
+    m_inputBlockSize(0), //host parameter
+    m_inputStepSize(0), //host parameter
+    m_noveltyCurveMinDB(0), //set in initialise()
+    m_noveltyCurveCompressionConstant(1000), //parameter
+    m_tempogramLog2WindowLength(10), //parameter
+    m_tempogramWindowLength(pow((float)2,m_tempogramLog2WindowLength)),
+    m_tempogramLog2FftLength(m_tempogramLog2WindowLength), //parameter
+    m_tempogramFftLength(m_tempogramWindowLength),
+    m_tempogramLog2HopSize(6), //parameter
+    m_tempogramHopSize(pow((float)2,m_tempogramLog2HopSize)),
+    m_tempogramMinBPM(30), //parameter
+    m_tempogramMaxBPM(480), //parameter
+    m_tempogramMinBin(0), //set in initialise()
+    m_tempogramMaxBin(0), //set in initialise()
+    m_cyclicTempogramMinBPM(30), //reset in initialise()
+    m_cyclicTempogramNumberOfOctaves(0), //set in initialise()
+    m_cyclicTempogramOctaveDivider(30) //parameter
 
     // Also be sure to set your plugin parameters (presumably stored
     // in member variables) to their default values here -- the host
@@ -191,7 +194,7 @@ TempogramPlugin::getParameterDescriptors() const
     
     ParameterDescriptor d5;
     d5.identifier = "minBPM";
-    d5.name = "Tempogram Minimum BPM";
+    d5.name = "(Cyclic) Tempogram Minimum BPM";
     d5.description = "The minimum BPM of the tempogram output bins.";
     d5.unit = "";
     d5.minValue = 0;
@@ -203,8 +206,8 @@ TempogramPlugin::getParameterDescriptors() const
     
     ParameterDescriptor d6;
     d6.identifier = "maxBPM";
-    d6.name = "Tempogram Maximum BPM";
-    d6.description = "The minimum BPM of the tempogram output bins.";
+    d6.name = "(Cyclic) Tempogram Maximum BPM";
+    d6.description = "The maximum BPM of the tempogram output bins.";
     d6.unit = "";
     d6.minValue = 30;
     d6.maxValue = 2000;
@@ -212,6 +215,18 @@ TempogramPlugin::getParameterDescriptors() const
     d6.isQuantized = true;
     d6.quantizeStep = 5;
     list.push_back(d6);
+    
+    ParameterDescriptor d7;
+    d7.identifier = "octDiv";
+    d7.name = "Cyclic Tempogram Octave Divider";
+    d7.description = "The number bins within each octave.";
+    d7.unit = "";
+    d7.minValue = 5;
+    d7.maxValue = 60;
+    d7.defaultValue = 30;
+    d7.isQuantized = true;
+    d7.quantizeStep = 1;
+    list.push_back(d7);
 
     return list;
 }
@@ -220,22 +235,25 @@ float
 TempogramPlugin::getParameter(string identifier) const
 {
     if (identifier == "C") {
-        return m_compressionConstant; // return the ACTUAL current value of your parameter here!
+        return m_noveltyCurveCompressionConstant; // return the ACTUAL current value of your parameter here!
     }
     else if (identifier == "log2TN"){
-        return m_log2WindowLength;
+        return m_tempogramLog2WindowLength;
     }
     else if (identifier == "log2HopSize"){
-        return m_log2HopSize;
+        return m_tempogramLog2HopSize;
     }
     else if (identifier == "log2FftLength"){
-        return m_log2FftLength;
+        return m_tempogramLog2FftLength;
     }
     else if (identifier == "minBPM") {
-        return m_minBPM;
+        return m_tempogramMinBPM;
     }
     else if (identifier == "maxBPM"){
-        return m_maxBPM;
+        return m_tempogramMaxBPM;
+    }
+    else if (identifier == "octDiv"){
+        return m_cyclicTempogramOctaveDivider;
     }
     
     return 0;
@@ -246,25 +264,28 @@ TempogramPlugin::setParameter(string identifier, float value)
 {
     
     if (identifier == "C") {
-        m_compressionConstant = value; // set the actual value of your parameter
+        m_noveltyCurveCompressionConstant = value; // set the actual value of your parameter
     }
     else if (identifier == "log2TN") {
-        m_windowLength = pow(2,value);
-        m_log2WindowLength = value;
+        m_tempogramWindowLength = pow(2,value);
+        m_tempogramLog2WindowLength = value;
     }
     else if (identifier == "log2HopSize"){
-        m_hopSize = pow(2,value);
-        m_log2HopSize = value;
+        m_tempogramHopSize = pow(2,value);
+        m_tempogramLog2HopSize = value;
     }
-    else if (identifier == "log2HopFftLength"){
-        m_fftLength = pow(2,value);
-        m_log2FftLength = value;
+    else if (identifier == "log2FftLength"){
+        m_tempogramFftLength = pow(2,value);
+        m_tempogramLog2FftLength = value;
     }
     else if (identifier == "minBPM") {
-        m_minBPM = value;
+        m_tempogramMinBPM = value;
     }
     else if (identifier == "maxBPM"){
-        m_maxBPM = value;
+        m_tempogramMaxBPM = value;
+    }
+    else if (identifier == "octDiv"){
+        m_cyclicTempogramOctaveDivider = value;
     }
     
 }
@@ -311,41 +332,57 @@ TempogramPlugin::getOutputDescriptors() const
     // See OutputDescriptor documentation for the possibilities here.
     // Every plugin must have at least one output.
     
-    OutputDescriptor d;
+    OutputDescriptor d1;
     float d_sampleRate;
-    float tempogramInputSampleRate = (float)m_inputSampleRate/m_stepSize;
+    float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
     
-    d.identifier = "tempogram";
-    d.name = "Tempogram";
-    d.description = "Tempogram";
-    d.unit = "BPM";
-    d.hasFixedBinCount = true;
-    d.binCount = m_maxBin - m_minBin + 1;
-    d.hasKnownExtents = false;
-    d.isQuantized = false;
-    d.sampleType = OutputDescriptor::FixedSampleRate;
-    d_sampleRate = tempogramInputSampleRate/m_hopSize;
-    d.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
-    for(int i = m_minBin; i <= (int)m_maxBin; i++){
-        float w = ((float)i/m_fftLength)*(tempogramInputSampleRate);
-        d.binNames.push_back(floatToString(w*60));
+    d1.identifier = "tempogram";
+    d1.name = "Tempogram";
+    d1.description = "Tempogram";
+    d1.unit = "BPM";
+    d1.hasFixedBinCount = true;
+    d1.binCount = m_tempogramMaxBin - m_tempogramMinBin + 1;
+    d1.hasKnownExtents = false;
+    d1.isQuantized = false;
+    d1.sampleType = OutputDescriptor::FixedSampleRate;
+    d_sampleRate = tempogramInputSampleRate/m_tempogramHopSize;
+    d1.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
+    for(int i = m_tempogramMinBin; i <= (int)m_tempogramMaxBin; i++){
+        float w = ((float)i/m_tempogramFftLength)*(tempogramInputSampleRate);
+        d1.binNames.push_back(floatToString(w*60));
     }
-    d.hasDuration = false;
-    list.push_back(d);
+    d1.hasDuration = false;
+    list.push_back(d1);
     
-    d.identifier = "nc";
-    d.name = "Novelty Curve";
-    d.description = "Novelty Curve";
-    d.unit = "";
-    d.hasFixedBinCount = true;
-    d.binCount = 1;
-    d.hasKnownExtents = false;
-    d.isQuantized = false;
-    d.sampleType = OutputDescriptor::FixedSampleRate;
+    OutputDescriptor d2;
+    d2.identifier = "nc";
+    d2.name = "Novelty Curve";
+    d2.description = "Novelty Curve";
+    d2.unit = "";
+    d2.hasFixedBinCount = true;
+    d2.binCount = 1;
+    d2.hasKnownExtents = false;
+    d2.isQuantized = false;
+    d2.sampleType = OutputDescriptor::FixedSampleRate;
     d_sampleRate = tempogramInputSampleRate;
-    d.sampleRate = d_sampleRate > 0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
-    d.hasDuration = false;
-    list.push_back(d);
+    d2.sampleRate = d_sampleRate > 0 && !isnan(d_sampleRate) ? d_sampleRate : 0;
+    d2.hasDuration = false;
+    list.push_back(d2);
+    
+    OutputDescriptor d3;
+    d3.identifier = "cyclicTempogram";
+    d3.name = "Cyclic Tempogram";
+    d3.description = "Cyclic Tempogram";
+    d3.unit = "";
+    d3.hasFixedBinCount = true;
+    d3.binCount = m_cyclicTempogramOctaveDivider > 0 && !isnan(m_cyclicTempogramOctaveDivider) ? m_cyclicTempogramOctaveDivider : 0;
+    d3.hasKnownExtents = false;
+    d3.isQuantized = false;
+    d3.sampleType = OutputDescriptor::FixedSampleRate;
+    d_sampleRate = tempogramInputSampleRate/m_tempogramHopSize;
+    d3.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0;
+    d3.hasDuration = false;
+    list.push_back(d3);
     
     return list;
 }
@@ -357,22 +394,31 @@ TempogramPlugin::initialise(size_t channels, size_t stepSize, size_t blockSize)
 	channels > getMaxChannelCount()) return false;
     
     // Real initialisation work goes here!
-    m_blockSize = blockSize;
-    m_stepSize = stepSize;
-    m_minDB = pow(10,(float)-74/20);
+    m_inputBlockSize = blockSize;
+    m_inputStepSize = stepSize;
+    m_noveltyCurveMinDB = pow(10,(float)-74/20);
     
-    if (m_fftLength < m_windowLength){
-        m_fftLength = m_windowLength;
+    if (m_tempogramFftLength < m_tempogramWindowLength){
+        m_tempogramFftLength = m_tempogramWindowLength;
     }
-    if (m_minBPM > m_maxBPM){
-        m_minBPM = 30;
-        m_maxBPM = 480;
+    if (m_tempogramMinBPM > m_tempogramMaxBPM){
+        m_tempogramMinBPM = 30;
+        m_tempogramMaxBPM = 480;
     }
-    float tempogramInputSampleRate = (float)m_inputSampleRate/m_stepSize;
-    m_minBin = (unsigned int)(max(floor(((m_minBPM/60)/tempogramInputSampleRate)*m_fftLength), (float)0.0));
-    m_maxBin = (unsigned int)(min(ceil(((m_maxBPM/60)/tempogramInputSampleRate)*m_fftLength), (float)m_fftLength/2));
     
-    m_spectrogram = SpectrogramTransposed(m_blockSize/2 + 1);
+    float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
+    m_tempogramMinBin = (unsigned int)(max(floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (float)0.0));
+    m_tempogramMaxBin = (unsigned int)(min(ceil(((m_tempogramMaxBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (float)m_tempogramFftLength/2));
+    
+    if (m_tempogramMinBPM > m_cyclicTempogramMinBPM) m_cyclicTempogramMinBPM = m_tempogramMinBPM;
+    float cyclicTempogramMaxBPM = 480;
+    if (m_tempogramMaxBPM < cyclicTempogramMaxBPM) cyclicTempogramMaxBPM = m_tempogramMaxBPM;
+    
+    m_spectrogram = SpectrogramTransposed(m_inputBlockSize/2 + 1);
+    
+    m_cyclicTempogramNumberOfOctaves = floor(log2(cyclicTempogramMaxBPM/m_cyclicTempogramMinBPM));
+    int numberOfBinsInFirstOctave = bpmToBin(m_cyclicTempogramMinBPM);
+    if (m_cyclicTempogramOctaveDivider < numberOfBinsInFirstOctave) m_cyclicTempogramOctaveDivider = numberOfBinsInFirstOctave;
     
     return true;
 }
@@ -385,14 +431,13 @@ void
 TempogramPlugin::reset()
 {
     // Clear buffers, reset stored values, etc
-    ncTimestamps.clear();
-    m_spectrogram = SpectrogramTransposed(m_blockSize/2 + 1);
+    m_spectrogram = SpectrogramTransposed(m_inputBlockSize/2 + 1);
 }
 
 TempogramPlugin::FeatureSet
 TempogramPlugin::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
 {
-    size_t n = m_blockSize/2 + 1;
+    size_t n = m_inputBlockSize/2 + 1;
     
     FeatureSet featureSet;
     Feature feature;
@@ -402,21 +447,45 @@ TempogramPlugin::process(const float *const *inputBuffers, Vamp::RealTime timest
     //calculate magnitude of FrequencyDomain input
     for (unsigned int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
-        magnitude = magnitude > m_minDB ? magnitude : m_minDB;
+        magnitude = magnitude > m_noveltyCurveMinDB ? magnitude : m_noveltyCurveMinDB;
         m_spectrogram[i].push_back(magnitude);
     }
-    
-    ncTimestamps.push_back(timestamp); //save timestamp
 
     return featureSet;
+}
+
+vector<unsigned int> TempogramPlugin::calculateTempogramNearestNeighbourLogBins() const
+{
+    vector<unsigned int> logBins;
+    
+    for (int i = 0; i < (int)ceil(m_cyclicTempogramNumberOfOctaves*m_cyclicTempogramOctaveDivider); i++){
+        float bpm = m_cyclicTempogramMinBPM*pow(2.0f, (float)i/m_cyclicTempogramOctaveDivider);
+        int bin = bpmToBin(bpm);
+        
+        logBins.push_back(bin);
+    }
+    
+    return logBins;
+}
+
+int TempogramPlugin::bpmToBin(const float &bpm) const
+{
+    float w = (float)bpm/60;
+    float sampleRate = m_inputSampleRate/m_inputStepSize;
+    int bin = floor((float)m_tempogramFftLength*w/sampleRate + 0.5);
+    
+    if(bin < 0) bin = 0;
+    else if(bin > m_tempogramFftLength/2) bin = m_tempogramFftLength;
+    
+    return bin;
 }
 
 TempogramPlugin::FeatureSet
 TempogramPlugin::getRemainingFeatures()
 {
     
-    float * hannWindow = new float[m_windowLength];
-    for (unsigned int i = 0; i < m_windowLength; i++){
+    float * hannWindow = new float[m_tempogramWindowLength];
+    for (unsigned int i = 0; i < m_tempogramWindowLength; i++){
         hannWindow[i] = 0.0;
     }
     
@@ -424,7 +493,7 @@ TempogramPlugin::getRemainingFeatures()
     
     //initialise m_noveltyCurve processor
     size_t numberOfBlocks = m_spectrogram[0].size();
-    NoveltyCurveProcessor nc(m_inputSampleRate, m_blockSize, numberOfBlocks, m_compressionConstant);
+    NoveltyCurveProcessor nc(m_inputSampleRate, m_inputBlockSize, numberOfBlocks, m_noveltyCurveCompressionConstant);
     m_noveltyCurve = nc.spectrogramToNoveltyCurve(m_spectrogram); //calculate novelty curve from magnitude data
     
     //push novelty curve data to featureset 1 and set timestamps
@@ -437,36 +506,48 @@ TempogramPlugin::getRemainingFeatures()
     }
     
     //window function for spectrogram
-    WindowFunction::hanning(hannWindow, m_windowLength);
+    WindowFunction::hanning(hannWindow, m_tempogramWindowLength);
     
     //initialise spectrogram processor
-    SpectrogramProcessor spectrogramProcessor(m_windowLength, m_fftLength, m_hopSize);
+    SpectrogramProcessor spectrogramProcessor(m_tempogramWindowLength, m_tempogramFftLength, m_tempogramHopSize);
     //compute spectrogram from novelty curve data (i.e., tempogram)
-    Spectrogram tempogram = spectrogramProcessor.process(&m_noveltyCurve[0], numberOfBlocks, hannWindow);
+    Tempogram tempogram = spectrogramProcessor.process(&m_noveltyCurve[0], numberOfBlocks, hannWindow);
+    delete []hannWindow;
+    hannWindow = 0;
     
-    int timePointer = m_hopSize-m_windowLength/2;
     int tempogramLength = tempogram.size();
     
     //push tempogram data to featureset 0 and set timestamps.
     for (int block = 0; block < tempogramLength; block++){
         Feature feature;
         
-        //int timeMS = floor(1000*(m_stepSize*timePointer)/m_inputSampleRate + 0.5);
-        
-        assert(tempogram[block].size() == (m_fftLength/2 + 1));
-        for(int k = m_minBin; k < (int)m_maxBin; k++){
+        assert(tempogram[block].size() == (m_tempogramFftLength/2 + 1));
+        for(int k = m_tempogramMinBin; k < (int)m_tempogramMaxBin; k++){
             feature.values.push_back(tempogram[block][k]);
-            //cout << tempogram[k][block] << endl;
         }
         feature.hasTimestamp = false;
-        //feature.timestamp = RealTime::fromMilliseconds(timeMS);
         featureSet[0].push_back(feature);
-        
-        timePointer += m_hopSize;
     }
     
-    delete []hannWindow;
-    hannWindow = 0;
+    //Calculate cyclic tempogram
+    vector<unsigned int> logBins = calculateTempogramNearestNeighbourLogBins();
+    Tempogram cyclicTempogram;
+    
+    for (int block = 0; block < tempogramLength; block++){
+        Feature feature;
+        
+        for (int i = 0; i < m_cyclicTempogramOctaveDivider; i++){
+            float sum = 0;
+            for (int j = 0; j < m_cyclicTempogramNumberOfOctaves; j++){
+                sum += tempogram[block][logBins[i+j*m_cyclicTempogramOctaveDivider]];
+            }
+            feature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
+        }
+
+        feature.hasTimestamp = false;
+        
+        featureSet[2].push_back(feature);
+    }
     
     return featureSet;
 }
