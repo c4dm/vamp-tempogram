@@ -1,5 +1,5 @@
 //
-//  NoveltyCurve.h
+//  NoveltyCurveProcessor.h
 //  Tempogram
 //
 //  Created by Carl Bussey on 10/07/2014.

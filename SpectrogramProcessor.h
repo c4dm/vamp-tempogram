@@ -1,5 +1,5 @@
 //
-//  Spectrogram.h
+//  SpectrogramProcessor.h
 //  Tempogram
 //
 //  Created by Carl Bussey on 07/08/2014.

@@ -1,5 +1,5 @@
 //
-//  NoveltyCurve.cpp
+//  NoveltyCurveProcessor.cpp
 //  Tempogram
 //
 //  Created by Carl Bussey on 10/07/2014.
