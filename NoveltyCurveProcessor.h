@@ -18,9 +18,9 @@
 #include "FIRFilter.h"
 #include "WindowFunction.h"
 #include <cassert>
-#include "Spectrogram.h"
+#include "SpectrogramProcessor.h"
 
-class NoveltyCurve{
+class NoveltyCurveProcessor{
     float m_samplingFrequency;
     int m_fftLength;
     int m_blockSize;
@@ -39,8 +39,8 @@ class NoveltyCurve{
     
 public:
     
-    NoveltyCurve(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant);
-    ~NoveltyCurve();
+    NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant);
+    ~NoveltyCurveProcessor();
     std::vector<float> spectrogramToNoveltyCurve(Spectrogram spectrogram) const;
 };
 

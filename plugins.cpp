@@ -7,12 +7,12 @@
 #include <vamp/vamp.h>
 #include <vamp-sdk/PluginAdapter.h>
 
-#include "Tempogram.h"
+#include "TempogramPlugin.h"
 
 
 // Declare one static adapter here for each plugin class in this library.
 
-static Vamp::PluginAdapter<Tempogram> myPluginAdapter;
+static Vamp::PluginAdapter<TempogramPlugin> myPluginAdapter;
 
 
 // This is the entry-point for the library, and the only function that

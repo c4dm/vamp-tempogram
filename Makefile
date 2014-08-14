@@ -21,11 +21,11 @@ PLUGIN_LIBRARY_NAME := tempogram
 
 # Edit this to list the .cpp or .c files in your plugin project
 #
-PLUGIN_SOURCES := Tempogram.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp NoveltyCurve.cpp Spectrogram.cpp
+PLUGIN_SOURCES := TempogramPlugin.cpp FIRFilter.cpp WindowFunction.cpp plugins.cpp NoveltyCurveProcessor.cpp SpectrogramProcessor.cpp
 
 # Edit this to list the .h files in your plugin project
 #
-PLUGIN_HEADERS := Tempogram.h FIRFilter.h WindowFunction.h NoveltyCurve.h Spectrogram.h
+PLUGIN_HEADERS := TempogramPlugin.h FIRFilter.h WindowFunction.h NoveltyCurveProcessor.h SpectrogramProcessor.h
 
 # Edit this to the location of the Vamp plugin SDK, relative to your
 # project directory

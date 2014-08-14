@@ -16,7 +16,6 @@ typedef std::vector <std::vector<float> > Spectrogram;
 typedef std::vector <std::vector<float> > SpectrogramTransposed;
 
 class SpectrogramProcessor{
-    size_t m_inputLength;
     size_t m_windowLength;
     size_t m_fftLength;
     size_t m_hopSize;
@@ -28,10 +27,11 @@ class SpectrogramProcessor{
     void initialise();
     void cleanup();
 public:
-    SpectrogramProcessor(const size_t &inputLength, const size_t &windowLength, const size_t &fftLength, const size_t &hopSize);
+    SpectrogramProcessor(const size_t &windowLength, const size_t &fftLength, const size_t &hopSize);
     ~SpectrogramProcessor();
     
-    std::vector< std::vector<float> > process(const float * const pInput, const float * pWindow) const;
+    std::vector< std::vector<float> > process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput = false) const;
+    static SpectrogramTransposed transpose(const Spectrogram &spectrogram);
 };
 
 #endif /* defined(__Tempogram__Spectrogram__) */

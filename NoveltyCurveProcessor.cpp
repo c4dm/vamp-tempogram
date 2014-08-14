@@ -8,11 +8,10 @@
 
 //Spectrogram dimensions should be flipped?
 
-#include "NoveltyCurve.h"
-#include <memory>
+#include "NoveltyCurveProcessor.h"
 using namespace std;
 
-NoveltyCurve::NoveltyCurve(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant) :
+NoveltyCurveProcessor::NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant) :
     m_samplingFrequency(samplingFrequency),
     m_fftLength(fftLength),
     m_blockSize(fftLength/2 + 1),
@@ -25,13 +24,13 @@ NoveltyCurve::NoveltyCurve(const float &samplingFrequency, const size_t &fftLeng
     initialise();
 }
 
-NoveltyCurve::~NoveltyCurve(){
+NoveltyCurveProcessor::~NoveltyCurveProcessor(){
     cleanup();
 }
 
 //allocate all space and set variable
 void
-NoveltyCurve::initialise(){
+NoveltyCurveProcessor::initialise(){
     
     // for bandwise processing, the band is split into 5 bands. m_pBandBoundaries contains the upper and lower bin boundaries for each band.
     m_pBandBoundaries = new int[m_numberOfBands+1];
@@ -47,7 +46,7 @@ NoveltyCurve::initialise(){
 
 //delete space allocated in initialise()
 void
-NoveltyCurve::cleanup(){
+NoveltyCurveProcessor::cleanup(){
     delete []m_pBandBoundaries;
     m_pBandBoundaries = 0;
     delete []m_pBandSum;
@@ -55,7 +54,7 @@ NoveltyCurve::cleanup(){
 }
 
 //calculate max of spectrogram
-float NoveltyCurve::calculateMax(const vector< vector<float> > &spectrogram) const
+float NoveltyCurveProcessor::calculateMax(const vector< vector<float> > &spectrogram) const
 {
     float max = 0;
     
@@ -70,7 +69,7 @@ float NoveltyCurve::calculateMax(const vector< vector<float> > &spectrogram) con
 
 //subtract local average of novelty curve
 //uses m_hannWindow as filter
-void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve, const size_t &smoothLength) const
+void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, const size_t &smoothLength) const
 {
     vector<float> localAverage(m_numberOfBlocks);
     
@@ -91,7 +90,7 @@ void NoveltyCurve::subtractLocalAverage(vector<float> &noveltyCurve, const size_
 }
 
 //smoothed differentiator filter. Flips upper half of hanning window about y-axis to create coefficients.
-void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, const size_t &smoothLength) const
+void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spectrogram, const size_t &smoothLength) const
 {
     
     float * diffHannWindow = new float [smoothLength];
@@ -110,7 +109,7 @@ void NoveltyCurve::smoothedDifferentiator(vector< vector<float> > &spectrogram, 
 }
 
 //half rectification (set negative to zero)
-void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram) const
+void NoveltyCurveProcessor::halfWaveRectify(vector< vector<float> > &spectrogram) const
 {
     for (unsigned int block = 0; block < m_numberOfBlocks; block++){
         for (unsigned int k = 0; k < m_blockSize; k++){
@@ -121,10 +120,11 @@ void NoveltyCurve::halfWaveRectify(vector< vector<float> > &spectrogram) const
 
 //process method
 vector<float>
-NoveltyCurve::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
+NoveltyCurveProcessor::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
 {
     std::vector<float> noveltyCurve(m_numberOfBlocks);
     
+    //cout << spectrogram[0].size() << " : " << m_numberOfBlocks << endl;
     assert(spectrogram.size() == m_blockSize);
     assert(spectrogram[0].size() == m_numberOfBlocks);
     

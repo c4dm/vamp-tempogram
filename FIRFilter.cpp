@@ -77,8 +77,10 @@ FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutp
     FFT::inverse(m_lengthFIRFFT, m_pFftFilteredReal, m_pFftFilteredImag, m_pFftOutputReal, m_pFftOutputImag);
     
     //copy to output
+    int offset = ceil(m_numberOfCoefficients/2);
+    //int offset = 0;
     for (unsigned int i = 0; i < m_lengthInput; i++){
-        pOutput[i] = m_pFftOutputReal[i];
+        pOutput[i] = m_pFftOutputReal[i + offset];
     }
 }
 

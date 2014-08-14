@@ -22,8 +22,8 @@
 #include <vamp-sdk/Plugin.h>
 #include "FIRFilter.h"
 #include "WindowFunction.h"
-#include "NoveltyCurve.h"
-#include "Spectrogram.h"
+#include "NoveltyCurveProcessor.h"
+#include "SpectrogramProcessor.h"
 #include <vamp-sdk/FFT.h>
 
 #include <cmath>
@@ -34,11 +34,11 @@
 using std::string;
 using std::vector;
 
-class Tempogram : public Vamp::Plugin
+class TempogramPlugin : public Vamp::Plugin
 {
 public:
-    Tempogram(float inputSampleRate);
-    virtual ~Tempogram();
+    TempogramPlugin(float inputSampleRate);
+    virtual ~TempogramPlugin();
 
     string getIdentifier() const;
     string getName() const;
@@ -76,7 +76,7 @@ protected:
     size_t m_blockSize;
     size_t m_stepSize;
     float m_compressionConstant;
-    vector< vector<float> > m_spectrogram; //spectrogram data
+    SpectrogramTransposed m_spectrogram; //spectrogram data
     vector<float> m_noveltyCurve; //novelty curve data
     float m_minDB;
     
@@ -85,17 +85,17 @@ protected:
     void updateBPMParameters();
     
     //FFT params for noveltyCurve -> tempogra
-    int m_log2WindowLength;
+    float m_log2WindowLength;
     size_t m_windowLength;
+    float m_log2FftLength;
     size_t m_fftLength;
+    float m_log2HopSize;
     size_t m_hopSize;
     
     float m_minBPM; // tempogram output bin range min
     float m_maxBPM; // tempogram output bin range max
     unsigned int m_minBin;
     unsigned int m_maxBin;
-    
-    unsigned int m_numberOfBlocks;
     
     vector<Vamp::RealTime> ncTimestamps;
 };

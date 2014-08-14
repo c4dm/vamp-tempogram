@@ -6,13 +6,12 @@
 //  Copyright (c) 2014 Carl Bussey. All rights reserved.
 //
 
-#include "Spectrogram.h"
+#include "SpectrogramProcessor.h"
 using namespace std;
 using Vamp::FFT;
 #include <iostream>
 
-SpectrogramProcessor::SpectrogramProcessor(const size_t &inputLength, const size_t &windowLength, const size_t &fftLength, const size_t &hopSize) :
-    m_inputLength(inputLength),
+SpectrogramProcessor::SpectrogramProcessor(const size_t &windowLength, const size_t &fftLength, const size_t &hopSize) :
     m_windowLength(windowLength),
     m_fftLength(fftLength),
     m_hopSize(hopSize),
@@ -42,20 +41,35 @@ void SpectrogramProcessor::cleanup(){
     m_pFftInput = m_pFftOutputReal = m_pFftOutputImag = 0;
 }
 
-//process method
-Spectrogram SpectrogramProcessor::process(const float * const pInput, const float * pWindow) const
-{
-    int numberOfBlocks = ceil(m_inputLength/m_hopSize) + 2*(ceil(m_windowLength/m_hopSize)-1); //The last term corresponds to overlaps at the beginning and end with padded zeros. I.e., if m_hopSize = m_windowLength/2, there'll be 1 overlap at each end. If m_hopSize = m_windowLength/4, there'll be 3 overlaps at each end, etc...
-    Spectrogram spectrogram(m_numberOfOutputBins, vector<float>(numberOfBlocks));
+SpectrogramTransposed SpectrogramProcessor::transpose(const Spectrogram &spectrogram){
+    int numberOfBlocks = spectrogram.size();
+    int numberOfBins = spectrogram[0].size();
     
-    int readPointerBeginIndex = m_hopSize-m_windowLength;
+    SpectrogramTransposed spectrogramT(numberOfBins, vector<float>(numberOfBlocks));
+    
+    for (int i = 0; i < numberOfBlocks; i++){
+        for (int j = 0; j < numberOfBins; j++){
+            spectrogramT[j][i] = spectrogram[i][j];
+        }
+    }
+    
+    return spectrogramT;
+}
+
+//process method
+Spectrogram SpectrogramProcessor::process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput) const
+{
+    Spectrogram spectrogram;
+    
+    unsigned int readBlockPointerIndex = 0;
     unsigned int writeBlockPointer = 0;
     
-    while(readPointerBeginIndex < (int)m_inputLength){
+    //cout << m_hopSize << endl;
+    while(readBlockPointerIndex <= inputLength) {
         
-        int readPointer = readPointerBeginIndex;
+        int readPointer = readBlockPointerIndex - m_windowLength/2;
         for (unsigned int n = 0; n < m_windowLength; n++){
-            if(readPointer < 0 || readPointer >= (int)m_inputLength){
+            if(readPointer < 0 || readPointer >= (int)inputLength){
                 m_pFftInput[n] = 0.0; //pad with zeros
             }
             else{
@@ -69,15 +83,18 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const floa
         
         FFT::forward(m_fftLength, m_pFftInput, 0, m_pFftOutputReal, m_pFftOutputImag);
         
+        vector<float> binValues;
         //@todo: sample at logarithmic spacing? Leave for host?
         for(unsigned int k = 0; k < m_numberOfOutputBins; k++){
-            spectrogram[k][writeBlockPointer] = (m_pFftOutputReal[k]*m_pFftOutputReal[k] + m_pFftOutputImag[k]*m_pFftOutputImag[k]); //Magnitude or power?
+            binValues.push_back(m_pFftOutputReal[k]*m_pFftOutputReal[k] + m_pFftOutputImag[k]*m_pFftOutputImag[k]); //Magnitude or power?
             //std::cout << spectrogram[k][writeBlockPointer] << std::endl;
         }
+        spectrogram.push_back(binValues);
         
-        readPointerBeginIndex += m_hopSize;
+        readBlockPointerIndex += m_hopSize;
         writeBlockPointer++;
     }
     
-    return spectrogram;
+    if(transposeOutput) return transpose(spectrogram);
+    else return spectrogram;
 }
