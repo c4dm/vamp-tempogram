@@ -30,7 +30,7 @@ public:
     SpectrogramProcessor(const size_t &windowLength, const size_t &fftLength, const size_t &hopSize);
     ~SpectrogramProcessor();
     
-    std::vector< std::vector<float> > process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput = false) const;
+    Spectrogram process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput = false) const;
     static SpectrogramTransposed transpose(const Spectrogram &spectrogram);
 };
 
