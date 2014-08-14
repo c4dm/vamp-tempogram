@@ -77,7 +77,7 @@ void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, co
     WindowFunction::hanning(m_hannWindow, smoothLength, true);
     
     FIRFilter filter(m_numberOfBlocks, smoothLength);
-    filter.process(&noveltyCurve[0], m_hannWindow, &localAverage[0]);
+    filter.process(&noveltyCurve[0], m_hannWindow, &localAverage[0], FIRFilter::middle);
     
     assert(noveltyCurve.size() == m_numberOfBlocks);
     for (unsigned int i = 0; i < m_numberOfBlocks; i++){
@@ -104,7 +104,7 @@ void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spec
     FIRFilter smoothFilter(m_numberOfBlocks, smoothLength);
     
     for (unsigned int i = 0; i < m_blockSize; i++){
-        smoothFilter.process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0]);
+        smoothFilter.process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0], FIRFilter::middle);
     }
 }
 

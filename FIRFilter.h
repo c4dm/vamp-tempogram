@@ -12,12 +12,19 @@
 #include <cmath>
 #include <vamp-sdk/FFT.h>
 #include <assert.h>
+#include <iostream>
 
 class FIRFilter{
 public:
+    enum OutputTypeArgument{
+        first = 0,
+        middle,
+        all
+    };
+    
     FIRFilter(const size_t &lengthInput, const size_t &numberOfCoefficients);
     ~FIRFilter();
-    void process(const float *pInput, const float *pCoefficients, float * pOutput);
+    void process(const float *pInput, const float *pCoefficients, float * pOutput, OutputTypeArgument outputType = first);
 private:
     size_t m_lengthInput;
     size_t m_numberOfCoefficients;

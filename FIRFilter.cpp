@@ -57,8 +57,9 @@ FIRFilter::initialise()
 }
 
 void
-FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutput)
+FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutput, OutputTypeArgument outputType)
 {
+    
     //Copy to same length FFT buffers
     for(unsigned int i = 0; i < m_lengthFIRFFT; i++){
         m_pFftInput[i] = i < m_lengthInput ? pInput[i] : 0.0;
@@ -77,9 +78,13 @@ FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutp
     FFT::inverse(m_lengthFIRFFT, m_pFftFilteredReal, m_pFftFilteredImag, m_pFftOutputReal, m_pFftOutputImag);
     
     //copy to output
-    int offset = ceil(m_numberOfCoefficients/2);
-    //int offset = 0;
-    for (unsigned int i = 0; i < m_lengthInput; i++){
+    int offset = 0;
+    unsigned int outputLength = m_lengthInput;
+    if (outputType == all) outputLength = m_lengthFIRFFT;
+    else if (outputType == middle) offset = floor((float)m_numberOfCoefficients/2);
+    else if (outputType != first) cerr << "FIRFilter::process(params) - " << outputType << " is not a valid argument. outputType is set to first." << endl;
+    
+    for (unsigned int i = 0; i < outputLength; i++){
         pOutput[i] = m_pFftOutputReal[i + offset];
     }
 }

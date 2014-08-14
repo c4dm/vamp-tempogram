@@ -135,7 +135,7 @@ TempogramPlugin::getParameterDescriptors() const
 
     ParameterDescriptor d1;
     d1.identifier = "C";
-    d1.name = "C";
+    d1.name = "Novelty Curve Spectrogram Compression Constant";
     d1.description = "Spectrogram compression constant, C, used when retrieving the novelty curve from the audio.";
     d1.unit = "";
     d1.minValue = 2;
@@ -191,7 +191,7 @@ TempogramPlugin::getParameterDescriptors() const
     
     ParameterDescriptor d5;
     d5.identifier = "minBPM";
-    d5.name = "Minimum BPM";
+    d5.name = "Tempogram Minimum BPM";
     d5.description = "The minimum BPM of the tempogram output bins.";
     d5.unit = "";
     d5.minValue = 0;
@@ -203,7 +203,7 @@ TempogramPlugin::getParameterDescriptors() const
     
     ParameterDescriptor d6;
     d6.identifier = "maxBPM";
-    d6.name = "Maximum BPM";
+    d6.name = "Tempogram Maximum BPM";
     d6.description = "The minimum BPM of the tempogram output bins.";
     d6.unit = "";
     d6.minValue = 30;
