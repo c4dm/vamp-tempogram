@@ -104,6 +104,7 @@ protected:
     string floatToString(float value) const;
     vector<unsigned int> calculateTempogramNearestNeighbourLogBins() const;
     int bpmToBin(const float &bpm) const;
+    void checkParameterValues();
 };
 
 

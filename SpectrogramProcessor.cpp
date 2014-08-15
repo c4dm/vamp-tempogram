@@ -68,7 +68,7 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
     while(readBlockPointerIndex <= inputLength) {
         
         int readPointer = readBlockPointerIndex - m_windowLength/2;
-        for (unsigned int n = 0; n < m_windowLength; n++){
+        for (int n = 0; n < (int)m_windowLength; n++){
             if(readPointer < 0 || readPointer >= (int)inputLength){
                 m_pFftInput[n] = 0.0; //pad with zeros
             }
@@ -77,7 +77,7 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
             }
             readPointer++;
         }
-        for (unsigned int n = m_windowLength; n < m_fftLength; n++){
+        for (int n = m_windowLength; n < (int)m_fftLength; n++){
             m_pFftInput[n] = 0.0;
         }
         
@@ -85,7 +85,7 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
         
         vector<float> binValues;
         //@todo: sample at logarithmic spacing? Leave for host?
-        for(unsigned int k = 0; k < m_numberOfOutputBins; k++){
+        for(int k = 0; k < (int)m_numberOfOutputBins; k++){
             binValues.push_back(m_pFftOutputReal[k]*m_pFftOutputReal[k] + m_pFftOutputImag[k]*m_pFftOutputImag[k]); //Magnitude or power?
             //std::cout << spectrogram[k][writeBlockPointer] << std::endl;
         }

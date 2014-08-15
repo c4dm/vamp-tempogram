@@ -97,13 +97,13 @@ void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spec
     WindowFunction::hanning(diffHannWindow, smoothLength, true);
     
     if(smoothLength%2) diffHannWindow[(smoothLength+1)/2 - 1] = 0;
-    for(unsigned int i = (smoothLength+1)/2; i < smoothLength; i++){
+    for(int i = (smoothLength+1)/2; i < (int)smoothLength; i++){
         diffHannWindow[i] = -diffHannWindow[i];
     }
     
     FIRFilter smoothFilter(m_numberOfBlocks, smoothLength);
     
-    for (unsigned int i = 0; i < m_blockSize; i++){
+    for (int i = 0; i < (int)m_blockSize; i++){
         smoothFilter.process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0], FIRFilter::middle);
     }
 }
@@ -111,8 +111,8 @@ void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spec
 //half rectification (set negative to zero)
 void NoveltyCurveProcessor::halfWaveRectify(vector< vector<float> > &spectrogram) const
 {
-    for (unsigned int block = 0; block < m_numberOfBlocks; block++){
-        for (unsigned int k = 0; k < m_blockSize; k++){
+    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+        for (int k = 0; k < (int)m_blockSize; k++){
             if (spectrogram[k][block] < 0.0) spectrogram[k][block] = 0.0;
         }
     }
@@ -130,8 +130,8 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
     
     //normalise and log spectrogram
     float normaliseScale = calculateMax(spectrogram);
-    for (unsigned int block = 0; block < m_numberOfBlocks; block++){
-        for (unsigned int k = 0; k < m_blockSize; k++){
+    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+        for (int k = 0; k < (int)m_blockSize; k++){
             if(normaliseScale != 0.0) spectrogram[k][block] /= normaliseScale; //normalise
             spectrogram[k][block] = log(1+m_compressionConstant*spectrogram[k][block]);
         }
@@ -143,8 +143,8 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
     halfWaveRectify(spectrogram);
     
     //bandwise processing
-    for (unsigned int block = 0; block < m_numberOfBlocks; block++){
-        for (unsigned int band = 0; band < m_numberOfBands; band++){
+    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+        for (int band = 0; band < (int)m_numberOfBands; band++){
             int k = m_pBandBoundaries[band];
             int bandEnd = m_pBandBoundaries[band+1];
             m_pBandSum[band] = 0;
@@ -155,7 +155,7 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
             }
         }
         float total = 0;
-        for(unsigned int band = 0; band < m_numberOfBands; band++){
+        for(int band = 0; band < (int)m_numberOfBands; band++){
             total += m_pBandSum[band];
         }
         noveltyCurve[block] = total/m_numberOfBands;

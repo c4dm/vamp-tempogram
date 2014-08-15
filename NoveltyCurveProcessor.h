@@ -22,11 +22,11 @@
 
 class NoveltyCurveProcessor{
     float m_samplingFrequency;
-    int m_fftLength;
-    int m_blockSize;
-    int m_numberOfBlocks;
+    size_t m_fftLength;
+    size_t m_blockSize;
+    size_t m_numberOfBlocks;
     int m_compressionConstant;
-    int m_numberOfBands;
+    size_t m_numberOfBands;
     int * m_pBandBoundaries;
     float * m_pBandSum;
     

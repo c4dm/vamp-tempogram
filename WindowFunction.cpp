@@ -14,12 +14,12 @@ void
 WindowFunction::hanning(float * window, const unsigned int &N, const bool &normalise){
     
     float sum = 0;
-    for(unsigned int i = 0; i < N; i++){
+    for(int i = 0; i < (int)N; i++){
         window[i] = 0.5*(1-cos((float)2*M_PI*i/N));
         sum += window[i];
     }
     if (normalise){
-        for(int i = 0; i < N; i++){
+        for(int i = 0; i < (int)N; i++){
             window[i] /= sum;
         }
     }

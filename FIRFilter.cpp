@@ -51,7 +51,7 @@ FIRFilter::initialise()
     m_pFftOutputReal = new double[m_lengthFIRFFT];
     m_pFftOutputImag = new double[m_lengthFIRFFT];
     
-    for(unsigned int i = 0; i < m_lengthFIRFFT; i++){
+    for(int i = 0; i < (int)m_lengthFIRFFT; i++){
         m_pFftInput[i] = m_pFftCoefficients[i] = m_pFftReal1[i] = m_pFftImag1[i] = m_pFftReal2[i] = m_pFftImag2[i] = m_pFftFilteredReal[i] = m_pFftFilteredImag[i] = m_pFftOutputReal[i] = m_pFftOutputImag[i] = 0.0;
     }
 }
@@ -61,16 +61,16 @@ FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutp
 {
     
     //Copy to same length FFT buffers
-    for(unsigned int i = 0; i < m_lengthFIRFFT; i++){
-        m_pFftInput[i] = i < m_lengthInput ? pInput[i] : 0.0;
-        m_pFftCoefficients[i] = i < m_numberOfCoefficients ? pCoefficients[i] : 0.0;
+    for(int i = 0; i < (int)m_lengthFIRFFT; i++){
+        m_pFftInput[i] = i < (int)m_lengthInput ? pInput[i] : 0.0;
+        m_pFftCoefficients[i] = i < (int)m_numberOfCoefficients ? pCoefficients[i] : 0.0;
     }
     
     FFT::forward(m_lengthFIRFFT, m_pFftInput, 0, m_pFftReal1, m_pFftImag1);
     FFT::forward(m_lengthFIRFFT, m_pFftCoefficients, 0, m_pFftReal2, m_pFftImag2);
     
     //Multiply FFT coefficients. Multiplication in freq domain is convolution in time domain.
-    for (unsigned int i = 0; i < m_lengthFIRFFT; i++){
+    for (int i = 0; i < (int)m_lengthFIRFFT; i++){
         m_pFftFilteredReal[i] = (m_pFftReal1[i] * m_pFftReal2[i]) - (m_pFftImag1[i] * m_pFftImag2[i]);
         m_pFftFilteredImag[i] = (m_pFftReal1[i] * m_pFftImag2[i]) + (m_pFftReal2[i] * m_pFftImag1[i]);
     }
@@ -79,12 +79,12 @@ FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutp
     
     //copy to output
     int offset = 0;
-    unsigned int outputLength = m_lengthInput;
-    if (outputType == all) outputLength = m_lengthFIRFFT;
-    else if (outputType == middle) offset = floor((float)m_numberOfCoefficients/2);
+    int outputLength = m_lengthInput;
+    if (outputType == all) outputLength = (int)m_lengthFIRFFT;
+    else if (outputType == middle) offset = floor(m_numberOfCoefficients/2.0f);
     else if (outputType != first) cerr << "FIRFilter::process(params) - " << outputType << " is not a valid argument. outputType is set to first." << endl;
     
-    for (unsigned int i = 0; i < outputLength; i++){
+    for (int i = 0; i < outputLength; i++){
         pOutput[i] = m_pFftOutputReal[i + offset];
     }
 }

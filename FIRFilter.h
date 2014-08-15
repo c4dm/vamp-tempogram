@@ -28,7 +28,7 @@ public:
 private:
     size_t m_lengthInput;
     size_t m_numberOfCoefficients;
-    int m_lengthFIRFFT;
+    size_t m_lengthFIRFFT;
     
     double *m_pFftInput;
     double *m_pFftCoefficients;
