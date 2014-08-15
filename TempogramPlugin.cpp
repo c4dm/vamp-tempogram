@@ -16,7 +16,7 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
     Plugin(inputSampleRate),
     m_inputBlockSize(0), //host parameter
     m_inputStepSize(0), //host parameter
-    m_noveltyCurveMinDB(0), //set in initialise()
+    m_noveltyCurveMinDB(pow(10,(float)-74/20)), //set in initialise()
     m_noveltyCurveCompressionConstant(1000), //parameter
     m_tempogramLog2WindowLength(10), //parameter
     m_tempogramWindowLength(pow((float)2,m_tempogramLog2WindowLength)),
@@ -41,7 +41,7 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
 TempogramPlugin::~TempogramPlugin()
 {
     //delete stuff
-    cleanup();
+    
 }
 
 string
@@ -290,10 +290,6 @@ TempogramPlugin::setParameter(string identifier, float value)
     
 }
 
-void TempogramPlugin::updateBPMParameters(){
-
-}
-
 TempogramPlugin::ProgramList
 TempogramPlugin::getPrograms() const
 {
@@ -396,7 +392,8 @@ TempogramPlugin::initialise(size_t channels, size_t stepSize, size_t blockSize)
     // Real initialisation work goes here!
     m_inputBlockSize = blockSize;
     m_inputStepSize = stepSize;
-    m_noveltyCurveMinDB = pow(10,(float)-74/20);
+    
+    m_spectrogram = SpectrogramTransposed(m_inputBlockSize/2 + 1);
     
     if (m_tempogramFftLength < m_tempogramWindowLength){
         m_tempogramFftLength = m_tempogramWindowLength;
@@ -414,23 +411,20 @@ TempogramPlugin::initialise(size_t channels, size_t stepSize, size_t blockSize)
     float cyclicTempogramMaxBPM = 480;
     if (m_tempogramMaxBPM < cyclicTempogramMaxBPM) cyclicTempogramMaxBPM = m_tempogramMaxBPM;
     
-    m_spectrogram = SpectrogramTransposed(m_inputBlockSize/2 + 1);
-    
     m_cyclicTempogramNumberOfOctaves = floor(log2(cyclicTempogramMaxBPM/m_cyclicTempogramMinBPM));
     int numberOfBinsInFirstOctave = bpmToBin(m_cyclicTempogramMinBPM);
-    if (m_cyclicTempogramOctaveDivider < numberOfBinsInFirstOctave) m_cyclicTempogramOctaveDivider = numberOfBinsInFirstOctave;
+    if (m_cyclicTempogramOctaveDivider > numberOfBinsInFirstOctave) m_cyclicTempogramOctaveDivider = numberOfBinsInFirstOctave;
+    
+    //cout << m_cyclicTempogramOctaveDivider << endl;
     
     return true;
-}
-
-void TempogramPlugin::cleanup(){
-
 }
 
 void
 TempogramPlugin::reset()
 {
     // Clear buffers, reset stored values, etc
+    m_spectrogram.clear();
     m_spectrogram = SpectrogramTransposed(m_inputBlockSize/2 + 1);
 }
 
@@ -463,7 +457,10 @@ vector<unsigned int> TempogramPlugin::calculateTempogramNearestNeighbourLogBins(
         int bin = bpmToBin(bpm);
         
         logBins.push_back(bin);
+        cerr << bin << endl;
     }
+    
+    cerr << logBins.size() << endl;
     
     return logBins;
 }
@@ -491,18 +488,17 @@ TempogramPlugin::getRemainingFeatures()
     
     FeatureSet featureSet;
     
-    //initialise m_noveltyCurve processor
+    //initialise novelty curve processor
     size_t numberOfBlocks = m_spectrogram[0].size();
     NoveltyCurveProcessor nc(m_inputSampleRate, m_inputBlockSize, numberOfBlocks, m_noveltyCurveCompressionConstant);
-    m_noveltyCurve = nc.spectrogramToNoveltyCurve(m_spectrogram); //calculate novelty curve from magnitude data
+    vector<float> noveltyCurve = nc.spectrogramToNoveltyCurve(m_spectrogram); //calculate novelty curve from magnitude data
     
     //push novelty curve data to featureset 1 and set timestamps
     for (unsigned int i = 0; i < numberOfBlocks; i++){
-        Feature feature;
-        feature.values.push_back(m_noveltyCurve[i]);
-        feature.hasTimestamp = false;
-        //feature.timestamp = ncTimestamps[i];
-        featureSet[1].push_back(feature);
+        Feature noveltyCurveFeature;
+        noveltyCurveFeature.values.push_back(noveltyCurve[i]);
+        noveltyCurveFeature.hasTimestamp = false;
+        featureSet[1].push_back(noveltyCurveFeature);
     }
     
     //window function for spectrogram
@@ -511,7 +507,7 @@ TempogramPlugin::getRemainingFeatures()
     //initialise spectrogram processor
     SpectrogramProcessor spectrogramProcessor(m_tempogramWindowLength, m_tempogramFftLength, m_tempogramHopSize);
     //compute spectrogram from novelty curve data (i.e., tempogram)
-    Tempogram tempogram = spectrogramProcessor.process(&m_noveltyCurve[0], numberOfBlocks, hannWindow);
+    Tempogram tempogram = spectrogramProcessor.process(&noveltyCurve[0], numberOfBlocks, hannWindow);
     delete []hannWindow;
     hannWindow = 0;
     
@@ -519,34 +515,34 @@ TempogramPlugin::getRemainingFeatures()
     
     //push tempogram data to featureset 0 and set timestamps.
     for (int block = 0; block < tempogramLength; block++){
-        Feature feature;
+        Feature tempogramFeature;
         
         assert(tempogram[block].size() == (m_tempogramFftLength/2 + 1));
         for(int k = m_tempogramMinBin; k < (int)m_tempogramMaxBin; k++){
-            feature.values.push_back(tempogram[block][k]);
+            tempogramFeature.values.push_back(tempogram[block][k]);
         }
-        feature.hasTimestamp = false;
-        featureSet[0].push_back(feature);
+        tempogramFeature.hasTimestamp = false;
+        featureSet[0].push_back(tempogramFeature);
     }
     
     //Calculate cyclic tempogram
     vector<unsigned int> logBins = calculateTempogramNearestNeighbourLogBins();
-    Tempogram cyclicTempogram;
     
+    assert(logBins.back() <= m_tempogramFftLength/2);
+    assert(logBins.size() == m_cyclicTempogramOctaveDivider*m_cyclicTempogramNumberOfOctaves);
     for (int block = 0; block < tempogramLength; block++){
-        Feature feature;
+        Feature cyclicTempogramFeature;
         
         for (int i = 0; i < m_cyclicTempogramOctaveDivider; i++){
             float sum = 0;
             for (int j = 0; j < m_cyclicTempogramNumberOfOctaves; j++){
                 sum += tempogram[block][logBins[i+j*m_cyclicTempogramOctaveDivider]];
             }
-            feature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
+            cyclicTempogramFeature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
         }
 
-        feature.hasTimestamp = false;
-        
-        featureSet[2].push_back(feature);
+        cyclicTempogramFeature.hasTimestamp = false;
+        featureSet[2].push_back(cyclicTempogramFeature);
     }
     
     return featureSet;

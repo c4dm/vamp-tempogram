@@ -78,16 +78,9 @@ protected:
     size_t m_inputBlockSize;
     size_t m_inputStepSize;
     SpectrogramTransposed m_spectrogram; //spectrogram data
-    vector<float> m_noveltyCurve; //novelty curve data
-    float m_noveltyCurveMinDB;
-    
-    void cleanup(); //used to release anything allocated in initialise()
-    string floatToString(float value) const;
-    vector<unsigned int> calculateTempogramNearestNeighbourLogBins() const;
-    void updateBPMParameters();
-    int bpmToBin(const float &bpm) const;
     
     //Novelty Curve specific parameters
+    float m_noveltyCurveMinDB;
     float m_noveltyCurveCompressionConstant;
     
     //Tempogram specific parameters
@@ -107,6 +100,10 @@ protected:
     float m_cyclicTempogramMinBPM;
     int m_cyclicTempogramNumberOfOctaves;
     int m_cyclicTempogramOctaveDivider;
+
+    string floatToString(float value) const;
+    vector<unsigned int> calculateTempogramNearestNeighbourLogBins() const;
+    int bpmToBin(const float &bpm) const;
 };
 
 
