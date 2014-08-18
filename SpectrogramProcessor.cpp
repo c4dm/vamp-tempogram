@@ -81,6 +81,7 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
             m_pFftInput[n] = 0.0;
         }
         
+        //cerr << m_fftLength << endl;
         FFT::forward(m_fftLength, m_pFftInput, 0, m_pFftOutputReal, m_pFftOutputImag);
         
         vector<float> binValues;

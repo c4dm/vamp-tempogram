@@ -40,7 +40,7 @@ VAMP_SDK_DIR := /usr/local/include
 
 CXX := g++
 #-mmacosx-version-min=10.6
-CXXFLAGS := -mmacosx-version-min=10.6 -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -Wextra -fPIC 
+CXXFLAGS := -g -mmacosx-version-min=10.6 -arch x86_64 -I$(VAMP_SDK_DIR) -Wall -Wextra -fPIC 
 PLUGIN_EXT := .dylib
 LDFLAGS := $(CXXFLAGS) -dynamiclib -install_name $(PLUGIN_LIBRARY_NAME)$(PLUGIN_EXT) /usr/local/lib/libvamp-sdk.a -exported_symbols_list vamp-plugin.list
 
