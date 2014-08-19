@@ -11,11 +11,10 @@
 #include "NoveltyCurveProcessor.h"
 using namespace std;
 
-NoveltyCurveProcessor::NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant) :
+NoveltyCurveProcessor::NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength,  const size_t &compressionConstant) :
     m_samplingFrequency(samplingFrequency),
     m_fftLength(fftLength),
     m_blockSize(fftLength/2 + 1),
-    m_numberOfBlocks(numberOfBlocks),
     m_compressionConstant(compressionConstant),
     m_numberOfBands(5),
     m_pBandBoundaries(0),
@@ -54,12 +53,15 @@ NoveltyCurveProcessor::cleanup(){
 }
 
 //calculate max of spectrogram
-float NoveltyCurveProcessor::calculateMax(const vector< vector<float> > &spectrogram) const
+float NoveltyCurveProcessor::calculateMax(const Spectrogram &spectrogram) const
 {
     float max = 0;
     
-    for (unsigned int j = 0; j < m_numberOfBlocks; j++){
-        for (unsigned int i = 0; i < m_blockSize; i++){
+    int length = spectrogram.size();
+    int height = spectrogram[0].size();
+    
+    for (int i = 0; i < length; i++){
+        for (int j = 0; j < height; j++){
             max = max > fabs(spectrogram[i][j]) ? max : fabs(spectrogram[i][j]);
         }
     }
@@ -71,16 +73,16 @@ float NoveltyCurveProcessor::calculateMax(const vector< vector<float> > &spectro
 //uses m_hannWindow as filter
 void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, const size_t &smoothLength) const
 {
-    vector<float> localAverage(m_numberOfBlocks);
+    int numberOfBlocks = noveltyCurve.size();
+    vector<float> localAverage(numberOfBlocks);
     
     float * m_hannWindow = new float[smoothLength];
     WindowFunction::hanning(m_hannWindow, smoothLength, true);
     
-    FIRFilter filter(m_numberOfBlocks, smoothLength);
+    FIRFilter filter(numberOfBlocks, smoothLength);
     filter.process(&noveltyCurve[0], m_hannWindow, &localAverage[0], FIRFilter::middle);
     
-    assert(noveltyCurve.size() == m_numberOfBlocks);
-    for (unsigned int i = 0; i < m_numberOfBlocks; i++){
+    for (int i = 0; i < numberOfBlocks; i++){
         noveltyCurve[i] -= localAverage[i];
         noveltyCurve[i] = noveltyCurve[i] >= 0 ? noveltyCurve[i] : 0;
     }
@@ -90,8 +92,10 @@ void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, co
 }
 
 //smoothed differentiator filter. Flips upper half of hanning window about y-axis to create coefficients.
-void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spectrogram, const size_t &smoothLength) const
+void NoveltyCurveProcessor::smoothedDifferentiator(SpectrogramTransposed &spectrogramTransposed, const size_t &smoothLength) const
 {
+    
+    int numberOfBlocks = spectrogramTransposed[0].size();
     
     float * diffHannWindow = new float [smoothLength];
     WindowFunction::hanning(diffHannWindow, smoothLength, true);
@@ -101,56 +105,56 @@ void NoveltyCurveProcessor::smoothedDifferentiator(vector< vector<float> > &spec
         diffHannWindow[i] = -diffHannWindow[i];
     }
     
-    FIRFilter smoothFilter(m_numberOfBlocks, smoothLength);
+    FIRFilter smoothFilter(numberOfBlocks, smoothLength);
     
     for (int i = 0; i < (int)m_blockSize; i++){
-        smoothFilter.process(&spectrogram[i][0], diffHannWindow, &spectrogram[i][0], FIRFilter::middle);
+        smoothFilter.process(&spectrogramTransposed[i][0], diffHannWindow, &spectrogramTransposed[i][0], FIRFilter::middle);
     }
 }
 
 //half rectification (set negative to zero)
-void NoveltyCurveProcessor::halfWaveRectify(vector< vector<float> > &spectrogram) const
+void NoveltyCurveProcessor::halfWaveRectify(SpectrogramTransposed &spectrogramTransposed) const
 {
-    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+    int numberOfBlocks = spectrogramTransposed[0].size();
+    
+    for (int block = 0; block < (int)numberOfBlocks; block++){
         for (int k = 0; k < (int)m_blockSize; k++){
-            if (spectrogram[k][block] < 0.0) spectrogram[k][block] = 0.0;
+            if (spectrogramTransposed[k][block] < 0.0) spectrogramTransposed[k][block] = 0.0;
         }
     }
 }
 
 //process method
 vector<float>
-NoveltyCurveProcessor::spectrogramToNoveltyCurve(Spectrogram spectrogram) const
+NoveltyCurveProcessor::spectrogramToNoveltyCurve(const Spectrogram &spectrogram) const //make argument const &
 {
-    std::vector<float> noveltyCurve(m_numberOfBlocks);
-    
-    //cout << spectrogram[0].size() << " : " << m_numberOfBlocks << endl;
-    assert(spectrogram.size() == m_blockSize);
-    assert(spectrogram[0].size() == m_numberOfBlocks);
+    int numberOfBlocks = spectrogram.size();
+    std::vector<float> noveltyCurve(numberOfBlocks);
+    SpectrogramTransposed spectrogramTransposed(spectrogram[0].size(), vector<float>(spectrogram.size()));
     
     //normalise and log spectrogram
     float normaliseScale = calculateMax(spectrogram);
-    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+    for (int block = 0; block < (int)numberOfBlocks; block++){
         for (int k = 0; k < (int)m_blockSize; k++){
-            if(normaliseScale != 0.0) spectrogram[k][block] /= normaliseScale; //normalise
-            spectrogram[k][block] = log(1+m_compressionConstant*spectrogram[k][block]);
+            spectrogramTransposed[k][block] = log(1+m_compressionConstant*spectrogram[block][k]);
+            if(normaliseScale != 0.0) spectrogramTransposed[k][block] /= normaliseScale; //normalise
         }
     }
 
     //smooted differentiator
-    smoothedDifferentiator(spectrogram, 5); //make smoothLength a parameter!
+    smoothedDifferentiator(spectrogramTransposed, 5); //make smoothLength a parameter!
     //halfwave rectification
-    halfWaveRectify(spectrogram);
+    halfWaveRectify(spectrogramTransposed);
     
     //bandwise processing
-    for (int block = 0; block < (int)m_numberOfBlocks; block++){
+    for (int block = 0; block < (int)numberOfBlocks; block++){
         for (int band = 0; band < (int)m_numberOfBands; band++){
             int k = m_pBandBoundaries[band];
             int bandEnd = m_pBandBoundaries[band+1];
             m_pBandSum[band] = 0;
             
             while(k < bandEnd){
-                m_pBandSum[band] += spectrogram[k][block];
+                m_pBandSum[band] += spectrogramTransposed[k][block];
                 k++;
             }
         }

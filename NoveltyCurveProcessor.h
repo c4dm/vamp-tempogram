@@ -24,7 +24,6 @@ class NoveltyCurveProcessor{
     float m_samplingFrequency;
     size_t m_fftLength;
     size_t m_blockSize;
-    size_t m_numberOfBlocks;
     int m_compressionConstant;
     size_t m_numberOfBands;
     int * m_pBandBoundaries;
@@ -32,16 +31,16 @@ class NoveltyCurveProcessor{
     
     void initialise();
     void cleanup();
-    float calculateMax(const std::vector< std::vector<float> > &spectrogram) const;
+    float calculateMax(const Spectrogram &spectrogram) const;
     void subtractLocalAverage(std::vector<float> &noveltyCurve, const size_t &smoothLength) const;
-    void smoothedDifferentiator(std::vector< std::vector<float> > &spectrogram, const size_t &smoothLength) const;
-    void halfWaveRectify(std::vector< std::vector<float> > &spectrogram) const;
+    void smoothedDifferentiator(SpectrogramTransposed &spectrogram, const size_t &smoothLength) const;
+    void halfWaveRectify(SpectrogramTransposed &spectrogram) const;
     
 public:
     
-    NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength, const size_t &numberOfBlocks, const size_t &compressionConstant);
+    NoveltyCurveProcessor(const float &samplingFrequency, const size_t &fftLength, const size_t &compressionConstant);
     ~NoveltyCurveProcessor();
-    std::vector<float> spectrogramToNoveltyCurve(Spectrogram spectrogram) const;
+    std::vector<float> spectrogramToNoveltyCurve(const Spectrogram &spectrogram) const;
 };
 
 #endif /* defined(__Tempogram__NoveltyCurve__) */

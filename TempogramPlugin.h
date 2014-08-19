@@ -77,7 +77,7 @@ protected:
     // plugin-specific data and methods go here
     size_t m_inputBlockSize;
     size_t m_inputStepSize;
-    SpectrogramTransposed m_spectrogram; //spectrogram data
+    Spectrogram m_spectrogram; //spectrogram data
     
     //Novelty Curve specific parameters
     float m_noveltyCurveMinDB;
@@ -102,8 +102,8 @@ protected:
     int m_cyclicTempogramOctaveDivider;
 
     string floatToString(float value) const;
-    vector<unsigned int> calculateTempogramNearestNeighbourLogBins() const;
-    int bpmToBin(const float &bpm) const;
+    vector< vector<unsigned int> > calculateTempogramNearestNeighbourLogBins() const;
+    unsigned int bpmToBin(const float &bpm) const;
     float binToBPM (const int &bin) const;
     bool handleParameterValues();
 };
