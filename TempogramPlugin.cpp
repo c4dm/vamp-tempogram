@@ -385,6 +385,7 @@ TempogramPlugin::initialise(size_t channels, size_t stepSize, size_t blockSize)
     m_inputBlockSize = blockSize;
     m_inputStepSize = stepSize;
     
+    //m_spectrogram = Spectrogram(m_inputBlockSize/2 + 1);
     if (!handleParameterValues()) return false;
     //cout << m_cyclicTempogramOctaveDivider << endl;
     
@@ -414,6 +415,7 @@ TempogramPlugin::process(const float *const *inputBuffers, Vamp::RealTime timest
         fftCoefficients.push_back(magnitude);
     }
     m_spectrogram.push_back(fftCoefficients);
+    //m_spectrogram.push_back(fftCoefficients);
     
     return FeatureSet();
 }
@@ -434,7 +436,6 @@ TempogramPlugin::getRemainingFeatures()
     //cerr << numberOfBlocks << endl;
     NoveltyCurveProcessor nc(m_inputSampleRate, m_inputBlockSize, m_noveltyCurveCompressionConstant);
     vector<float> noveltyCurve = nc.spectrogramToNoveltyCurve(m_spectrogram); //calculate novelty curvefrom magnitude data
-    //if(noveltyCurve.size() > 50) for (int i = 0; i < 50; i++) cerr << noveltyCurve[i] << endl;
     
     //push novelty curve data to featureset 1 and set timestamps
     for (int i = 0; i < numberOfBlocks; i++){

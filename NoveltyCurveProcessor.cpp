@@ -113,13 +113,14 @@ void NoveltyCurveProcessor::smoothedDifferentiator(SpectrogramTransposed &spectr
 }
 
 //half rectification (set negative to zero)
-void NoveltyCurveProcessor::halfWaveRectify(SpectrogramTransposed &spectrogramTransposed) const
+void NoveltyCurveProcessor::halfWaveRectify(Spectrogram &spectrogram) const
 {
-    int numberOfBlocks = spectrogramTransposed[0].size();
+    int length = spectrogram.size();
+    int height = spectrogram[0].size();
     
-    for (int block = 0; block < numberOfBlocks; block++){
-        for (int k = 0; k < (int)m_blockSize; k++){
-            if (spectrogramTransposed[k][block] < 0.0) spectrogramTransposed[k][block] = 0.0;
+    for (int i = 0; i < length; i++){
+        for (int j = 0; j < height; j++){
+            if (spectrogram[i][j] < 0.0) spectrogram[i][j] = 0.0;
         }
     }
 }
@@ -140,7 +141,7 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(const Spectrogram &spectrogram)
             if(normaliseScale != 0.0) spectrogramTransposed[k][block] /= normaliseScale; //normalise
         }
     }
-
+    
     //smooted differentiator
     smoothedDifferentiator(spectrogramTransposed, 5); //make smoothLength a parameter!
     //halfwave rectification

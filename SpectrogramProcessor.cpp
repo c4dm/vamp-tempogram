@@ -61,11 +61,11 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
 {
     Spectrogram spectrogram;
     
-    unsigned int readBlockPointerIndex = 0;
-    unsigned int writeBlockPointer = 0;
+    int readBlockPointerIndex = 0;
+    int writeBlockPointer = 0;
     
     //cout << m_hopSize << endl;
-    while(readBlockPointerIndex <= inputLength) {
+    while(readBlockPointerIndex <= (int)inputLength) {
         
         int readPointer = readBlockPointerIndex - m_windowLength/2;
         for (int n = 0; n < (int)m_windowLength; n++){
