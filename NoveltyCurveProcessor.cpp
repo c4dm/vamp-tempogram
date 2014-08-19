@@ -117,7 +117,7 @@ void NoveltyCurveProcessor::halfWaveRectify(SpectrogramTransposed &spectrogramTr
 {
     int numberOfBlocks = spectrogramTransposed[0].size();
     
-    for (int block = 0; block < (int)numberOfBlocks; block++){
+    for (int block = 0; block < numberOfBlocks; block++){
         for (int k = 0; k < (int)m_blockSize; k++){
             if (spectrogramTransposed[k][block] < 0.0) spectrogramTransposed[k][block] = 0.0;
         }
