@@ -22,7 +22,6 @@ public:
 private:
     size_t m_windowLength;
     unsigned int m_hopSize;
-    unsigned int m_lagIncrement;
     float * m_blockInput;
     
     std::vector<float> processBlock() const;

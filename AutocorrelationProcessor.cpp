@@ -48,13 +48,13 @@ vector<float> AutocorrelationProcessor::processBlock() const
 {
     vector<float> autocorrelation;
     
-    int N = m_windowLength/m_lagIncrement;
+    int N = m_windowLength;
     
     for (int lag = 0; lag < N; lag++){
         float sum = 0;
 
-        for (int n = 0; n < (int)m_windowLength-lag; n++){
-            sum += m_blockInput[lag]*m_blockInput[n+lag];
+        for (int n = 0; n < N-lag; n++){
+            sum += m_blockInput[n]*m_blockInput[n+lag];
         }
         autocorrelation.push_back(sum/(2*N + 1 - lag));
     }
