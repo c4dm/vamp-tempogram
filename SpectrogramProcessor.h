@@ -31,8 +31,9 @@ public:
     SpectrogramProcessor(const size_t &windowLength, const size_t &fftLength, const size_t &hopSize);
     ~SpectrogramProcessor();
     
-    Spectrogram process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput = false) const;
+    Spectrogram process(const float * const pInput, const size_t &inputLength, const float * pWindow) const;
     static SpectrogramTransposed transpose(const Spectrogram &spectrogram);
+    static float calculateMax(const Spectrogram &spectrogram);
 };
 
 #endif /* defined(__Tempogram__Spectrogram__) */

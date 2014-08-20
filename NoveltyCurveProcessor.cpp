@@ -52,23 +52,6 @@ NoveltyCurveProcessor::cleanup(){
     m_pBandSum = 0;
 }
 
-//calculate max of spectrogram
-float NoveltyCurveProcessor::calculateMax(const Spectrogram &spectrogram) const
-{
-    float max = 0;
-    
-    int length = spectrogram.size();
-    int height = spectrogram[0].size();
-    
-    for (int i = 0; i < length; i++){
-        for (int j = 0; j < height; j++){
-            max = max > fabs(spectrogram[i][j]) ? max : fabs(spectrogram[i][j]);
-        }
-    }
-    
-    return max;
-}
-
 //subtract local average of novelty curve
 //uses m_hannWindow as filter
 void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, const size_t &smoothLength) const
@@ -94,7 +77,6 @@ void NoveltyCurveProcessor::subtractLocalAverage(vector<float> &noveltyCurve, co
 //smoothed differentiator filter. Flips upper half of hanning window about y-axis to create coefficients.
 void NoveltyCurveProcessor::smoothedDifferentiator(SpectrogramTransposed &spectrogramTransposed, const size_t &smoothLength) const
 {
-    
     int numberOfBlocks = spectrogramTransposed[0].size();
     
     float * diffHannWindow = new float [smoothLength];
@@ -116,7 +98,7 @@ void NoveltyCurveProcessor::smoothedDifferentiator(SpectrogramTransposed &spectr
 void NoveltyCurveProcessor::halfWaveRectify(Spectrogram &spectrogram) const
 {
     int length = spectrogram.size();
-    int height = spectrogram[0].size();
+    int height = length > 0 ? spectrogram[0].size() : 0;
     
     for (int i = 0; i < length; i++){
         for (int j = 0; j < height; j++){
@@ -131,14 +113,15 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(const Spectrogram &spectrogram)
 {
     int numberOfBlocks = spectrogram.size();
     std::vector<float> noveltyCurve(numberOfBlocks);
-    SpectrogramTransposed spectrogramTransposed(spectrogram[0].size(), vector<float>(spectrogram.size()));
+    SpectrogramTransposed spectrogramTransposed(m_blockSize, vector<float>(spectrogram.size()));
     
     //normalise and log spectrogram
-    float normaliseScale = calculateMax(spectrogram);
+    float normaliseScale = SpectrogramProcessor::calculateMax(spectrogram);
     for (int block = 0; block < (int)numberOfBlocks; block++){
         for (int k = 0; k < (int)m_blockSize; k++){
-            spectrogramTransposed[k][block] = log(1+m_compressionConstant*spectrogram[block][k]);
-            if(normaliseScale != 0.0) spectrogramTransposed[k][block] /= normaliseScale; //normalise
+            float magnitude = spectrogram[block][k];
+            if(normaliseScale != 0.0) magnitude /= normaliseScale; //normalise
+            spectrogramTransposed[k][block] = log(1+m_compressionConstant*magnitude);
         }
     }
     

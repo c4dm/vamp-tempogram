@@ -31,7 +31,6 @@ class NoveltyCurveProcessor{
     
     void initialise();
     void cleanup();
-    float calculateMax(const Spectrogram &spectrogram) const;
     void subtractLocalAverage(std::vector<float> &noveltyCurve, const size_t &smoothLength) const;
     void smoothedDifferentiator(SpectrogramTransposed &spectrogram, const size_t &smoothLength) const;
     void halfWaveRectify(SpectrogramTransposed &spectrogram) const;

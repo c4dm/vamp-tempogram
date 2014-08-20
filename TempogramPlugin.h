@@ -24,12 +24,15 @@
 #include "WindowFunction.h"
 #include "NoveltyCurveProcessor.h"
 #include "SpectrogramProcessor.h"
+#include "AutocorrelationProcessor.h"
 #include <vamp-sdk/FFT.h>
 
 #include <cmath>
 #include <fstream>
 #include <cassert>
 #include <string>
+#include <sstream>
+#include <stdexcept>
 
 using std::string;
 using std::vector;

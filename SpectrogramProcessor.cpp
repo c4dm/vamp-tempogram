@@ -56,8 +56,25 @@ SpectrogramTransposed SpectrogramProcessor::transpose(const Spectrogram &spectro
     return spectrogramT;
 }
 
+//calculate max of spectrogram
+float SpectrogramProcessor::calculateMax(const Spectrogram &spectrogram)
+{
+    float max = 0;
+    
+    int length = spectrogram.size();
+    int height = length > 0 ? spectrogram[0].size() : 0;
+    
+    for (int i = 0; i < length; i++){
+        for (int j = 0; j < height; j++){
+            max = max > fabs(spectrogram[i][j]) ? max : fabs(spectrogram[i][j]);
+        }
+    }
+    
+    return max;
+}
+
 //process method
-Spectrogram SpectrogramProcessor::process(const float * const pInput, const size_t &inputLength, const float * pWindow, const bool &transposeOutput) const
+Spectrogram SpectrogramProcessor::process(const float * const pInput, const size_t &inputLength, const float * pWindow) const
 {
     Spectrogram spectrogram;
     
@@ -96,6 +113,5 @@ Spectrogram SpectrogramProcessor::process(const float * const pInput, const size
         writeBlockPointer++;
     }
     
-    if(transposeOutput) return transpose(spectrogram);
-    else return spectrogram;
+    return spectrogram;
 }
