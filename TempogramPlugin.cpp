@@ -474,8 +474,7 @@ TempogramPlugin::getRemainingFeatures()
     delete []hannWindow;
     hannWindow = 0;
     
-    int tempogramLag = 1;
-    AutocorrelationProcessor autocorrelationProcessor(m_tempogramWindowLength, m_tempogramHopSize, tempogramLag);
+    AutocorrelationProcessor autocorrelationProcessor(m_tempogramWindowLength, m_tempogramHopSize);
     Tempogram tempogramACT = autocorrelationProcessor.process(&noveltyCurve[0], numberOfBlocks);
     
     int tempogramLength = tempogramDFT.size();

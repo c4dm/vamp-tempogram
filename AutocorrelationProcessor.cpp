@@ -9,12 +9,17 @@
 #include "AutocorrelationProcessor.h"
 using namespace std;
 
-AutocorrelationProcessor::AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize, const unsigned int &lagIncrement) :
+AutocorrelationProcessor::AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize) :
     m_windowLength(windowLength),
     m_hopSize(hopSize),
-    m_lagIncrement(lagIncrement)
+    m_blockInput(0)
 {
-    //Nothing to do here
+    m_blockInput = new float [m_windowLength];
+}
+
+AutocorrelationProcessor::~AutocorrelationProcessor(){
+    delete []m_blockInput;
+    m_blockInput = 0;
 }
 
 AutoCorrelation AutocorrelationProcessor::process(float * input, const size_t &inputLength) const
@@ -23,16 +28,23 @@ AutoCorrelation AutocorrelationProcessor::process(float * input, const size_t &i
     AutoCorrelation autocorrelation;
     
     while(readBlockPointerIndex <= (int)inputLength) {
-        int readPointer = readBlockPointerIndex - m_windowLength/2;
+        int readPointer = readBlockPointerIndex - m_windowLength/2; //read window centered at readBlockPointerIndex
         
-        autocorrelation.push_back(processBlock(&input[readPointer], min(inputLength-readPointer, m_windowLength)));
+        for (int n = 0; n < (int)m_windowLength; n++){
+            if (readPointer < 0 || readPointer >= (int)inputLength) m_blockInput[n] = 0.0f;
+            else m_blockInput[n] = input[readPointer];
+            
+            readPointer++;
+        }
+        
+        autocorrelation.push_back(processBlock());
         readBlockPointerIndex += m_hopSize;
     }
     
     return autocorrelation;
 }
 
-vector<float> AutocorrelationProcessor::processBlock(float * blockInput, const size_t &blockLength) const
+vector<float> AutocorrelationProcessor::processBlock() const
 {
     vector<float> autocorrelation;
     
@@ -40,10 +52,9 @@ vector<float> AutocorrelationProcessor::processBlock(float * blockInput, const s
     
     for (int lag = 0; lag < N; lag++){
         float sum = 0;
-        int sampleLag = m_lagIncrement*lag;
-        
-        for (int n = sampleLag; n < (int)blockLength; n++){
-            sum += blockInput[n-sampleLag]*blockInput[n];
+
+        for (int n = 0; n < (int)m_windowLength-lag; n++){
+            sum += m_blockInput[lag]*m_blockInput[n+lag];
         }
         autocorrelation.push_back(sum/(2*N + 1 - lag));
     }

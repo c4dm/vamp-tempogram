@@ -16,14 +16,16 @@ typedef std::vector< std::vector<float> > AutoCorrelation;
 
 class AutocorrelationProcessor{
 public:
-    AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize, const unsigned int &lagIncrement);
+    AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize);
+    ~AutocorrelationProcessor();
     AutoCorrelation process(float * input, const size_t &inputLength) const;
-    std::vector<float> processBlock(float * input, const size_t &inputLength) const;
 private:
     size_t m_windowLength;
     unsigned int m_hopSize;
     unsigned int m_lagIncrement;
+    float * m_blockInput;
     
+    std::vector<float> processBlock() const;
 };
 
 #endif /* defined(__Tempogram__Autocorrelation__) */
