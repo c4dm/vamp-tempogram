@@ -8,18 +8,17 @@
 
 #include "AutocorrelationProcessor.h"
 using namespace std;
+#include <iostream>
 
 AutocorrelationProcessor::AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize) :
     m_windowLength(windowLength),
-    m_hopSize(hopSize),
-    m_blockInput(0)
+    m_hopSize(hopSize)
 {
-    m_blockInput = new float [m_windowLength];
+
 }
 
 AutocorrelationProcessor::~AutocorrelationProcessor(){
-    delete []m_blockInput;
-    m_blockInput = 0;
+
 }
 
 AutoCorrelation AutocorrelationProcessor::process(float * input, const size_t &inputLength) const
@@ -28,35 +27,26 @@ AutoCorrelation AutocorrelationProcessor::process(float * input, const size_t &i
     AutoCorrelation autocorrelation;
     
     while(readBlockPointerIndex <= (int)inputLength) {
-        int readPointer = readBlockPointerIndex - m_windowLength/2; //read window centered at readBlockPointerIndex
         
-        for (int n = 0; n < (int)m_windowLength; n++){
-            if (readPointer < 0 || readPointer >= (int)inputLength) m_blockInput[n] = 0.0f;
-            else m_blockInput[n] = input[readPointer];
+        vector<float> autocorrelationBlock;
+        
+        for (int lag = 0; lag < (int)m_windowLength; lag++){
+            float sum = 0;
+            int readPointer = readBlockPointerIndex - m_windowLength/2;
             
-            readPointer++;
+            for (int n = 0; n < (int)m_windowLength; n++){
+                if (readPointer+lag >= (int)inputLength) break;
+                else if (readPointer >= 0) sum += input[readPointer]*input[readPointer+lag];
+                //else cout << readPointer << " : "<< lag << "/" << m_windowLength << endl;
+                
+                readPointer++;
+            }
+            autocorrelationBlock.push_back(sum/(2*m_windowLength + 1 - lag));
         }
         
-        autocorrelation.push_back(processBlock());
+        //autocorrelation.push_back(processBlock());
+        autocorrelation.push_back(autocorrelationBlock);
         readBlockPointerIndex += m_hopSize;
-    }
-    
-    return autocorrelation;
-}
-
-vector<float> AutocorrelationProcessor::processBlock() const
-{
-    vector<float> autocorrelation;
-    
-    int N = m_windowLength;
-    
-    for (int lag = 0; lag < N; lag++){
-        float sum = 0;
-
-        for (int n = 0; n < N-lag; n++){
-            sum += m_blockInput[n]*m_blockInput[n+lag];
-        }
-        autocorrelation.push_back(sum/(2*N + 1 - lag));
     }
     
     return autocorrelation;

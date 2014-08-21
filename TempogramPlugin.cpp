@@ -27,6 +27,8 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
     m_tempogramMaxBPM(480), //parameter
     m_tempogramMinBin(0), //set in initialise()
     m_tempogramMaxBin(0), //set in initialise()
+    m_tempogramMinLag(0),
+    m_tempogramMaxLag(0),
     m_cyclicTempogramMinBPM(30), //reset in initialise()
     m_cyclicTempogramNumberOfOctaves(0), //set in initialise()
     m_cyclicTempogramOctaveDivider(30) //parameter
@@ -362,15 +364,14 @@ TempogramPlugin::getOutputDescriptors() const
     d3.description = "Tempogram via ACT";
     d3.unit = "BPM";
     d3.hasFixedBinCount = true;
-    d3.binCount = m_tempogramMaxBin - m_tempogramMinBin + 1;
+    d3.binCount = m_tempogramMaxLag - m_tempogramMinLag + 1;
     d3.hasKnownExtents = false;
     d3.isQuantized = false;
     d3.sampleType = OutputDescriptor::FixedSampleRate;
     d_sampleRate = tempogramInputSampleRate/m_tempogramHopSize;
     d3.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0.0;
-    for(int i = m_tempogramMinBin; i <= (int)m_tempogramMaxBin; i++){
-        float w = ((float)i/m_tempogramFftLength)*(tempogramInputSampleRate);
-        d3.binNames.push_back(floatToString(w*60));
+    for(int lag = m_tempogramMaxLag; lag >= (int)m_tempogramMinLag; lag--){
+        d3.binNames.push_back(floatToString(60/(m_inputStepSize*(lag/m_inputSampleRate))));
     }
     d3.hasDuration = false;
     list.push_back(d3);
@@ -474,24 +475,30 @@ TempogramPlugin::getRemainingFeatures()
     delete []hannWindow;
     hannWindow = 0;
     
-    AutocorrelationProcessor autocorrelationProcessor(m_tempogramWindowLength, m_tempogramHopSize);
-    Tempogram tempogramACT = autocorrelationProcessor.process(&noveltyCurve[0], numberOfBlocks);
-    
     int tempogramLength = tempogramDFT.size();
     
     //push tempogram data to featureset 0 and set timestamps.
     for (int block = 0; block < tempogramLength; block++){
         Feature tempogramDFTFeature;
-        Feature tempogramACTFeature;
         
         assert(tempogramDFT[block].size() == (m_tempogramFftLength/2 + 1));
-        for(int k = m_tempogramMinBin; k < (int)m_tempogramMaxBin; k++){
+        for(int k = m_tempogramMinBin; k <= (int)m_tempogramMaxBin; k++){
             tempogramDFTFeature.values.push_back(tempogramDFT[block][k]);
-            tempogramACTFeature.values.push_back(tempogramACT[block][k]);
         }
         tempogramDFTFeature.hasTimestamp = false;
-        tempogramACTFeature.hasTimestamp = false;
         featureSet[1].push_back(tempogramDFTFeature);
+    }
+    
+    AutocorrelationProcessor autocorrelationProcessor(m_tempogramWindowLength, m_tempogramHopSize);
+    Tempogram tempogramACT = autocorrelationProcessor.process(&noveltyCurve[0], numberOfBlocks);
+    
+    for (int block = 0; block < tempogramLength; block++){
+        Feature tempogramACTFeature;
+        
+        for(int k = m_tempogramMaxLag; k >= (int)m_tempogramMinLag; k--){
+            tempogramACTFeature.values.push_back(tempogramACT[block][k]);
+        }
+        tempogramACTFeature.hasTimestamp = false;
         featureSet[2].push_back(tempogramACTFeature);
     }
     
@@ -572,8 +579,11 @@ bool TempogramPlugin::handleParameterValues(){
     }
     
     float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
-    m_tempogramMinBin = (max(floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (float)0.0));
-    m_tempogramMaxBin = (min(ceil(((m_tempogramMaxBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (float)m_tempogramFftLength/2));
+    m_tempogramMinBin = (max((int)floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), 0));
+    m_tempogramMaxBin = (min((int)ceil(((m_tempogramMaxBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (int)(m_tempogramFftLength/2)));
+    
+    m_tempogramMinLag = max((int)ceil((60/(m_inputStepSize * m_tempogramMaxBPM))*m_inputSampleRate), 0);
+    m_tempogramMaxLag = min((int)floor((60/(m_inputStepSize * m_tempogramMinBPM))*m_inputSampleRate), (int)m_tempogramWindowLength);
     
     if (m_tempogramMinBPM > m_cyclicTempogramMinBPM) m_cyclicTempogramMinBPM = m_tempogramMinBPM; //m_cyclicTempogram can't be less than default = 30
     float cyclicTempogramMaxBPM = 480;

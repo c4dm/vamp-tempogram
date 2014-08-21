@@ -22,9 +22,6 @@ public:
 private:
     size_t m_windowLength;
     unsigned int m_hopSize;
-    float * m_blockInput;
-    
-    std::vector<float> processBlock() const;
 };
 
 #endif /* defined(__Tempogram__Autocorrelation__) */

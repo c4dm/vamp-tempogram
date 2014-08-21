@@ -98,6 +98,8 @@ protected:
     float m_tempogramMaxBPM; // tempogram output bin range max
     unsigned int m_tempogramMinBin;
     unsigned int m_tempogramMaxBin;
+    unsigned int m_tempogramMinLag;
+    unsigned int m_tempogramMaxLag;
     
     //Cyclic tempogram parameters
     float m_cyclicTempogramMinBPM;
