@@ -150,7 +150,7 @@ NoveltyCurveProcessor::spectrogramToNoveltyCurve(const Spectrogram &spectrogram)
     }
     
     //subtract local averages
-    subtractLocalAverage(noveltyCurve, 65);
+    subtractLocalAverage(noveltyCurve, 65); //maybe smaller?
     
     return noveltyCurve;
 }

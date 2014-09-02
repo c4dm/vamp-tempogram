@@ -15,20 +15,21 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
     Plugin(inputSampleRate),
     m_inputBlockSize(0), //host parameter
     m_inputStepSize(0), //host parameter
-    m_noveltyCurveMinDB(pow(10,(float)-74/20)), //set in initialise()
+    m_noveltyCurveMinDB(-74), //parameter
+    m_noveltyCurveMinV(0), //set in initialise()
     m_noveltyCurveCompressionConstant(1000), //parameter
     m_tempogramLog2WindowLength(10), //parameter
-    m_tempogramWindowLength(pow((float)2,m_tempogramLog2WindowLength)),
+    m_tempogramWindowLength(0), //set in initialise()
     m_tempogramLog2FftLength(m_tempogramLog2WindowLength), //parameter
-    m_tempogramFftLength(m_tempogramWindowLength),
+    m_tempogramFftLength(0), //set in initialise()
     m_tempogramLog2HopSize(6), //parameter
-    m_tempogramHopSize(pow((float)2,m_tempogramLog2HopSize)),
+    m_tempogramHopSize(0), //set in initialise()
     m_tempogramMinBPM(30), //parameter
     m_tempogramMaxBPM(480), //parameter
     m_tempogramMinBin(0), //set in initialise()
     m_tempogramMaxBin(0), //set in initialise()
-    m_tempogramMinLag(0),
-    m_tempogramMaxLag(0),
+    m_tempogramMinLag(0), //set in initialise()
+    m_tempogramMaxLag(0), //set in initialise()
     m_cyclicTempogramMinBPM(30), //reset in initialise()
     m_cyclicTempogramNumberOfOctaves(0), //set in initialise()
     m_cyclicTempogramOctaveDivider(30) //parameter
@@ -42,7 +43,6 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
 TempogramPlugin::~TempogramPlugin()
 {
     //delete stuff
-    
 }
 
 string
@@ -147,30 +147,26 @@ TempogramPlugin::getParameterDescriptors() const
     d1.defaultValue = 1000;
     d1.isQuantized = false;
     list.push_back(d1);
-
-    ParameterDescriptor d2;
-    d2.identifier = "log2TN";
-    d2.name = "Tempogram Window Length";
-    d2.description = "FFT window length when analysing the novelty curve and extracting the tempogram time-frequency function.";
-    d2.unit = "";
-    d2.minValue = 7;
-    d2.maxValue = 12;
-    d2.defaultValue = 10;
-    d2.isQuantized = true;
-    d2.quantizeStep = 1;
-    for (int i = d2.minValue; i <= d2.maxValue; i++){
-        d2.valueNames.push_back(floatToString(pow((float)2,(float)i)));
-    }
-    list.push_back(d2);
     
+    ParameterDescriptor d2;
+    d2.identifier = "minDB";
+    d2.name = "Novelty Curve Minimum DB";
+    d2.description = "Spectrogram minimum DB used when removing unwanted peaks in the Spectrogram when retrieving the novelty curve from the audio.";
+    d2.unit = "";
+    d2.minValue = -100;
+    d2.maxValue = -50;
+    d2.defaultValue = -74;
+    d2.isQuantized = false;
+    list.push_back(d2);
+
     ParameterDescriptor d3;
-    d3.identifier = "log2HopSize";
-    d3.name = "Tempogram Hopsize";
-    d3.description = "FFT hopsize when analysing the novelty curve and extracting the tempogram time-frequency function.";
+    d3.identifier = "log2TN";
+    d3.name = "Tempogram Window Length";
+    d3.description = "FFT window length when analysing the novelty curve and extracting the tempogram time-frequency function.";
     d3.unit = "";
-    d3.minValue = 6;
+    d3.minValue = 7;
     d3.maxValue = 12;
-    d3.defaultValue = 6;
+    d3.defaultValue = 10;
     d3.isQuantized = true;
     d3.quantizeStep = 1;
     for (int i = d3.minValue; i <= d3.maxValue; i++){
@@ -179,13 +175,13 @@ TempogramPlugin::getParameterDescriptors() const
     list.push_back(d3);
     
     ParameterDescriptor d4;
-    d4.identifier = "log2FftLength";
-    d4.name = "Tempogram FFT Length";
-    d4.description = "FFT length when analysing the novelty curve and extracting the tempogram time-frequency function. This parameter determines the amount of zero padding.";
+    d4.identifier = "log2HopSize";
+    d4.name = "Tempogram Hopsize";
+    d4.description = "FFT hopsize when analysing the novelty curve and extracting the tempogram time-frequency function.";
     d4.unit = "";
     d4.minValue = 6;
     d4.maxValue = 12;
-    d4.defaultValue = d2.defaultValue;
+    d4.defaultValue = 6;
     d4.isQuantized = true;
     d4.quantizeStep = 1;
     for (int i = d4.minValue; i <= d4.maxValue; i++){
@@ -194,40 +190,55 @@ TempogramPlugin::getParameterDescriptors() const
     list.push_back(d4);
     
     ParameterDescriptor d5;
-    d5.identifier = "minBPM";
-    d5.name = "(Cyclic) Tempogram Minimum BPM";
-    d5.description = "The minimum BPM of the tempogram output bins.";
+    d5.identifier = "log2FftLength";
+    d5.name = "Tempogram FFT Length";
+    d5.description = "FFT length when analysing the novelty curve and extracting the tempogram time-frequency function. This parameter determines the amount of zero padding.";
     d5.unit = "";
-    d5.minValue = 0;
-    d5.maxValue = 2000;
-    d5.defaultValue = 30;
+    d5.minValue = 6;
+    d5.maxValue = 12;
+    d5.defaultValue = d2.defaultValue;
     d5.isQuantized = true;
-    d5.quantizeStep = 5;
+    d5.quantizeStep = 1;
+    for (int i = d5.minValue; i <= d5.maxValue; i++){
+        d4.valueNames.push_back(floatToString(pow((float)2,(float)i)));
+    }
     list.push_back(d5);
     
     ParameterDescriptor d6;
-    d6.identifier = "maxBPM";
-    d6.name = "(Cyclic) Tempogram Maximum BPM";
-    d6.description = "The maximum BPM of the tempogram output bins.";
+    d6.identifier = "minBPM";
+    d6.name = "(Cyclic) Tempogram Minimum BPM";
+    d6.description = "The minimum BPM of the tempogram output bins.";
     d6.unit = "";
-    d6.minValue = 30;
+    d6.minValue = 0;
     d6.maxValue = 2000;
-    d6.defaultValue = 480;
+    d6.defaultValue = 30;
     d6.isQuantized = true;
     d6.quantizeStep = 5;
     list.push_back(d6);
     
     ParameterDescriptor d7;
-    d7.identifier = "octDiv";
-    d7.name = "Cyclic Tempogram Octave Divider";
-    d7.description = "The number bins within each octave.";
+    d7.identifier = "maxBPM";
+    d7.name = "(Cyclic) Tempogram Maximum BPM";
+    d7.description = "The maximum BPM of the tempogram output bins.";
     d7.unit = "";
-    d7.minValue = 5;
-    d7.maxValue = 60;
-    d7.defaultValue = 30;
+    d7.minValue = 30;
+    d7.maxValue = 2000;
+    d7.defaultValue = 480;
     d7.isQuantized = true;
-    d7.quantizeStep = 1;
+    d7.quantizeStep = 5;
     list.push_back(d7);
+    
+    ParameterDescriptor d8;
+    d8.identifier = "octDiv";
+    d8.name = "Cyclic Tempogram Octave Divider";
+    d8.description = "The number bins within each octave.";
+    d8.unit = "";
+    d8.minValue = 5;
+    d8.maxValue = 60;
+    d8.defaultValue = 30;
+    d8.isQuantized = true;
+    d8.quantizeStep = 1;
+    list.push_back(d8);
 
     return list;
 }
@@ -237,6 +248,9 @@ TempogramPlugin::getParameter(string identifier) const
 {
     if (identifier == "C") {
         return m_noveltyCurveCompressionConstant; // return the ACTUAL current value of your parameter here!
+    }
+    else if (identifier == "minDB"){
+        return m_noveltyCurveMinDB;
     }
     else if (identifier == "log2TN"){
         return m_tempogramLog2WindowLength;
@@ -267,17 +281,17 @@ TempogramPlugin::setParameter(string identifier, float value)
     if (identifier == "C") {
         m_noveltyCurveCompressionConstant = value; // set the actual value of your parameter
     }
+    else if (identifier == "minDB"){
+        m_noveltyCurveMinDB = value;
+    }
     else if (identifier == "log2TN") {
-        m_tempogramWindowLength = pow(2,value);
         m_tempogramLog2WindowLength = value;
     }
     else if (identifier == "log2HopSize"){
         m_tempogramHopSize = pow(2,value);
-        m_tempogramLog2HopSize = value;
     }
     else if (identifier == "log2FftLength"){
         m_tempogramFftLength = pow(2,value);
-        m_tempogramLog2FftLength = value;
     }
     else if (identifier == "minBPM") {
         m_tempogramMinBPM = value;
@@ -422,7 +436,6 @@ TempogramPlugin::reset()
 TempogramPlugin::FeatureSet
 TempogramPlugin::process(const float *const *inputBuffers, Vamp::RealTime timestamp)
 {
-    
     int n = m_inputBlockSize/2 + 1;
     const float *in = inputBuffers[0];
 
@@ -430,7 +443,7 @@ TempogramPlugin::process(const float *const *inputBuffers, Vamp::RealTime timest
     vector<float> fftCoefficients;
     for (int i = 0; i < n; i++){
         float magnitude = sqrt(in[2*i] * in[2*i] + in[2*i + 1] * in[2*i + 1]);
-        magnitude = magnitude > m_noveltyCurveMinDB ? magnitude : m_noveltyCurveMinDB;
+        magnitude = magnitude > m_noveltyCurveMinV ? magnitude : m_noveltyCurveMinV;
         fftCoefficients.push_back(magnitude);
     }
     m_spectrogram.push_back(fftCoefficients);
@@ -577,6 +590,12 @@ bool TempogramPlugin::handleParameterValues(){
         m_tempogramMinBPM = 30;
         m_tempogramMaxBPM = 480;
     }
+    
+    m_noveltyCurveMinV = pow(10,(float)m_noveltyCurveMinDB/20);
+    
+    m_tempogramWindowLength = pow(2,m_tempogramLog2WindowLength);
+    m_tempogramHopSize = pow(2,m_tempogramLog2HopSize);
+    m_tempogramFftLength = pow(2,m_tempogramLog2FftLength);
     
     float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
     m_tempogramMinBin = (max((int)floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), 0));

@@ -17,7 +17,8 @@ AutocorrelationProcessor::AutocorrelationProcessor(const size_t &windowLength, c
 
 }
 
-AutocorrelationProcessor::~AutocorrelationProcessor(){
+AutocorrelationProcessor::~AutocorrelationProcessor()
+{
 
 }
 

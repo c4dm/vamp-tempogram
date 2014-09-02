@@ -84,6 +84,7 @@ protected:
     
     //Novelty Curve specific parameters
     float m_noveltyCurveMinDB;
+    float m_noveltyCurveMinV;
     float m_noveltyCurveCompressionConstant;
     
     //Tempogram specific parameters
