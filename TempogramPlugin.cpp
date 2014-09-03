@@ -288,10 +288,10 @@ TempogramPlugin::setParameter(string identifier, float value)
         m_tempogramLog2WindowLength = value;
     }
     else if (identifier == "log2HopSize"){
-        m_tempogramHopSize = pow(2,value);
+        m_tempogramLog2HopSize = value;
     }
     else if (identifier == "log2FftLength"){
-        m_tempogramFftLength = pow(2,value);
+        m_tempogramLog2FftLength = value;
     }
     else if (identifier == "minBPM") {
         m_tempogramMinBPM = value;
@@ -580,12 +580,9 @@ float TempogramPlugin::binToBPM(const int &bin) const
 
 bool TempogramPlugin::handleParameterValues(){
     
-    if (m_tempogramHopSize <= 0) return false;
+    if (m_tempogramLog2HopSize <= 0) return false;
     if (m_tempogramLog2FftLength <= 0) return false;
     
-    if (m_tempogramFftLength < m_tempogramWindowLength){
-        m_tempogramFftLength = m_tempogramWindowLength;
-    }
     if (m_tempogramMinBPM >= m_tempogramMaxBPM){
         m_tempogramMinBPM = 30;
         m_tempogramMaxBPM = 480;
@@ -596,6 +593,10 @@ bool TempogramPlugin::handleParameterValues(){
     m_tempogramWindowLength = pow(2,m_tempogramLog2WindowLength);
     m_tempogramHopSize = pow(2,m_tempogramLog2HopSize);
     m_tempogramFftLength = pow(2,m_tempogramLog2FftLength);
+    
+    if (m_tempogramFftLength < m_tempogramWindowLength){
+        m_tempogramFftLength = m_tempogramWindowLength;
+    }
     
     float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
     m_tempogramMinBin = (max((int)floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), 0));
