@@ -37,9 +37,11 @@ NoveltyCurveProcessor::initialise(){
     for (unsigned int band = 1; band < m_numberOfBands; band++){
         float lowFreq = 500*pow(2.5, (int)band-1);
         m_pBandBoundaries[band] = m_fftLength*lowFreq/m_samplingFrequency;
+	if (m_pBandBoundaries[band] > (int)m_blockSize) {
+	    m_pBandBoundaries[band] = m_blockSize;
+	}
     }
     m_pBandBoundaries[m_numberOfBands] = m_blockSize;
-    
     m_pBandSum = new float [m_numberOfBands];
 }
 
