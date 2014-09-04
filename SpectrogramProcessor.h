@@ -11,7 +11,7 @@
 #include <vector>
 #include <vamp-sdk/FFT.h>
 #include <cmath>
-#include <stddef.h>
+#include <cstddef>
 
 typedef std::vector <std::vector<float> > Spectrogram;
 typedef std::vector <std::vector<float> > SpectrogramTransposed;
