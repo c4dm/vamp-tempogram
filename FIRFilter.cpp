@@ -80,7 +80,7 @@ FIRFilter::process(const float* pInput, const float* pCoefficients, float* pOutp
     //copy to output
     int offset = 0;
     int outputLength = m_lengthInput;
-    if (outputType == all) outputLength = (int)m_lengthFIRFFT;
+    if (outputType == all) outputLength = m_lengthInput+m_numberOfCoefficients-1;
     else if (outputType == middle) offset = floor(m_numberOfCoefficients/2.0f);
     else if (outputType != first) cerr << "FIRFilter::process(params) - " << outputType << " is not a valid argument. outputType is set to first." << endl;
     
