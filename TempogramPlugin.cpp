@@ -526,7 +526,18 @@ TempogramPlugin::getRemainingFeatures()
             float sum = 0;
             
             for (int j = 0; j < m_cyclicTempogramNumberOfOctaves; j++){
-                sum += tempogramDFT[block][logBins[j][i]];
+
+		if (block >= tempogramDFT.size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": block " << block << " >= tempogramDFT.size() " << tempogramDFT.size() << endl;
+		} else if (j > logBins.size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": j " << j << " >= logBins.size() " << logBins.size() << endl;
+		} else if (i > logBins[j].size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": i " << i << " >= logBins[j].size() " << logBins[j].size() << endl;
+		} else if (logBins[j][i] >= tempogramDFT[block].size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": logBins[j][i] " << logBins[j][i] << " >= tempogramDFT[block].size() " << tempogramDFT[block].size() << endl;
+		} else {
+		    sum += tempogramDFT[block][logBins[j][i]];
+		}
             }
             cyclicTempogramFeature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
             assert(!isnan(cyclicTempogramFeature.values.back()));
@@ -601,9 +612,29 @@ bool TempogramPlugin::handleParameterValues(){
     float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
     m_tempogramMinBin = (max((int)floor(((m_tempogramMinBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), 0));
     m_tempogramMaxBin = (min((int)ceil(((m_tempogramMaxBPM/60)/tempogramInputSampleRate)*m_tempogramFftLength), (int)(m_tempogramFftLength/2)));
+
+    if (m_tempogramMaxBin < m_tempogramMinBin) {
+	cerr << "At audio sample rate " << m_inputSampleRate
+	     << ", tempogram sample rate " << tempogramInputSampleRate
+	     << " with bpm range " << m_tempogramMinBPM << " -> "
+	     << m_tempogramMaxBPM << ", min bin = " << m_tempogramMinBin 
+	     << " > max bin " << m_tempogramMaxBin
+	     << ": can't proceed, failing initialise" << endl;
+	return false;
+    }
     
     m_tempogramMinLag = max((int)ceil((60/(m_inputStepSize * m_tempogramMaxBPM))*m_inputSampleRate), 0);
     m_tempogramMaxLag = min((int)floor((60/(m_inputStepSize * m_tempogramMinBPM))*m_inputSampleRate), (int)m_tempogramWindowLength);
+
+    if (m_tempogramMaxLag < m_tempogramMinLag) {
+	cerr << "At audio sample rate " << m_inputSampleRate
+	     << ", tempogram sample rate " << tempogramInputSampleRate
+	     << " with bpm range " << m_tempogramMinBPM << " -> "
+	     << m_tempogramMaxBPM << ", min bin = " << m_tempogramMinLag 
+	     << " > max bin " << m_tempogramMaxLag
+	     << ": can't proceed, failing initialise" << endl;
+	return false;
+    }
     
     if (m_tempogramMinBPM > m_cyclicTempogramMinBPM) m_cyclicTempogramMinBPM = m_tempogramMinBPM; //m_cyclicTempogram can't be less than default = 30
     float cyclicTempogramMaxBPM = 480;
