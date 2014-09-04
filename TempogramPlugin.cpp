@@ -526,7 +526,18 @@ TempogramPlugin::getRemainingFeatures()
             float sum = 0;
             
             for (int j = 0; j < m_cyclicTempogramNumberOfOctaves; j++){
-                sum += tempogramDFT[block][logBins[j][i]];
+
+		if (block >= tempogramDFT.size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": block " << block << " >= tempogramDFT.size() " << tempogramDFT.size() << endl;
+		} else if (j > logBins.size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": j " << j << " >= logBins.size() " << logBins.size() << endl;
+		} else if (i > logBins[j].size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": i " << i << " >= logBins[j].size() " << logBins[j].size() << endl;
+		} else if (logBins[j][i] >= tempogramDFT[block].size()) {
+		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": logBins[j][i] " << logBins[j][i] << " >= tempogramDFT[block].size() " << tempogramDFT[block].size() << endl;
+		} else {
+		    sum += tempogramDFT[block][logBins[j][i]];
+		}
             }
             cyclicTempogramFeature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
             assert(!isnan(cyclicTempogramFeature.values.back()));
