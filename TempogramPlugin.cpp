@@ -188,7 +188,7 @@ TempogramPlugin::getParameterDescriptors() const
     d5.unit = "";
     d5.minValue = 6;
     d5.maxValue = 12;
-    d5.defaultValue = d2.defaultValue;
+    d5.defaultValue = 10;
     d5.isQuantized = true;
     d5.quantizeStep = 1;
     for (int i = d5.minValue; i <= d5.maxValue; i++){
@@ -329,7 +329,6 @@ TempogramPlugin::getOutputDescriptors() const
     
     float d_sampleRate;
     float tempogramInputSampleRate = (float)m_inputSampleRate/m_inputStepSize;
-    
     OutputDescriptor d1;
     d1.identifier = "cyclicTempogram";
     d1.name = "Cyclic Tempogram";
@@ -557,8 +556,6 @@ vector< vector<unsigned int> > TempogramPlugin::calculateTempogramNearestNeighbo
         logBins.push_back(octaveBins);
     }
     
-    //cerr << logBins.size() << endl;
-    
     return logBins;
 }
 
@@ -583,9 +580,20 @@ float TempogramPlugin::binToBPM(const int &bin) const
 
 bool TempogramPlugin::handleParameterValues(){
     
-    if (m_tempogramLog2HopSize <= 0) return false;
-    if (m_tempogramLog2FftLength <= 0) return false;
+    if (m_tempogramLog2HopSize <= 0) {
+	cerr << "Tempogram log2 hop size " << m_tempogramLog2HopSize
+	     << " <= 0, failing initialise" << endl;
+	return false;
+    }
+    if (m_tempogramLog2FftLength <= 0) {
+	cerr << "Tempogram log2 fft length " << m_tempogramLog2FftLength
+	     << " <= 0, failing initialise" << endl;
+	return false;
+    }
     
+    if (m_tempogramMinBPM < 1) {
+	m_tempogramMinBPM = 1;
+    }
     if (m_tempogramMinBPM >= m_tempogramMaxBPM){
         m_tempogramMinBPM = 30;
         m_tempogramMaxBPM = 480;
@@ -621,18 +629,30 @@ bool TempogramPlugin::handleParameterValues(){
     if (m_tempogramMaxLag < m_tempogramMinLag) {
 	cerr << "At audio sample rate " << m_inputSampleRate
 	     << ", tempogram sample rate " << tempogramInputSampleRate
+	     << ", window length " << m_tempogramWindowLength
 	     << " with bpm range " << m_tempogramMinBPM << " -> "
-	     << m_tempogramMaxBPM << ", min bin = " << m_tempogramMinLag 
-	     << " > max bin " << m_tempogramMaxLag
+	     << m_tempogramMaxBPM << ", min lag = " << m_tempogramMinLag 
+	     << " > max lag " << m_tempogramMaxLag
 	     << ": can't proceed, failing initialise" << endl;
 	return false;
     }
     
-    if (m_tempogramMinBPM > m_cyclicTempogramMinBPM) m_cyclicTempogramMinBPM = m_tempogramMinBPM; //m_cyclicTempogram can't be less than default = 30
-    float cyclicTempogramMaxBPM = 480;
-    if (m_tempogramMaxBPM < cyclicTempogramMaxBPM) cyclicTempogramMaxBPM = m_tempogramMaxBPM;
-    
+    m_cyclicTempogramMinBPM = m_tempogramMinBPM;
+    float cyclicTempogramMaxBPM = m_tempogramMaxBPM;
+
     m_cyclicTempogramNumberOfOctaves = floor(log2(cyclicTempogramMaxBPM/m_cyclicTempogramMinBPM));
+
+    if (m_cyclicTempogramNumberOfOctaves < 1) {
+	cerr << "At audio sample rate " << m_inputSampleRate
+	     << ", tempogram sample rate " << tempogramInputSampleRate
+	     << " with bpm range " << m_tempogramMinBPM << " -> "
+	     << m_tempogramMaxBPM << ", cyclic tempogram min bpm = "
+	     << m_cyclicTempogramMinBPM << " and max bpm = "
+	     << cyclicTempogramMaxBPM << " giving number of octaves = "
+	     << m_cyclicTempogramNumberOfOctaves
+	     << ": can't proceed, failing initialise" << endl;
+	return false;
+    }
     
     return true;
 }
