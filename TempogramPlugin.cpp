@@ -192,7 +192,7 @@ TempogramPlugin::getParameterDescriptors() const
     d5.isQuantized = true;
     d5.quantizeStep = 1;
     for (int i = d5.minValue; i <= d5.maxValue; i++){
-        d4.valueNames.push_back(floatToString(pow((float)2,(float)i)));
+        d5.valueNames.push_back(floatToString(pow((float)2,(float)i)));
     }
     list.push_back(d5);
     

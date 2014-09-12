@@ -94,6 +94,8 @@ void NoveltyCurveProcessor::smoothedDifferentiator(SpectrogramTransposed &spectr
     for (int i = 0; i < (int)m_blockSize; i++){
         smoothFilter.process(&spectrogramTransposed[i][0], diffHannWindow, &spectrogramTransposed[i][0], FIRFilter::middle);
     }
+
+    delete[] diffHannWindow;
 }
 
 //half rectification (set negative to zero)
