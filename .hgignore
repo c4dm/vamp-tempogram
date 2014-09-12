@@ -4,3 +4,4 @@ syntax: glob
 *.dll
 *.dylib
 *~
+cov-int/*

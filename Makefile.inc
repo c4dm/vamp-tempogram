@@ -63,11 +63,28 @@ $(PLUGIN): $(PLUGIN_OBJECTS)
 $(PLUGIN_OBJECTS): $(PLUGIN_HEADERS)
 
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(PLUGIN_OBJECTS)
 
 distclean:	clean
 	rm -f $(PLUGIN)
 
 depend:
-	makedepend -Y -fMakefile.inc $(SOURCES) $(HEADERS)
+	makedepend -Y -fMakefile.inc $(PLUGIN_SOURCES) $(PLUGIN_HEADERS)
 
+# DO NOT DELETE
+
+TempogramPlugin.o: TempogramPlugin.h FIRFilter.h WindowFunction.h
+TempogramPlugin.o: NoveltyCurveProcessor.h SpectrogramProcessor.h
+TempogramPlugin.o: AutocorrelationProcessor.h
+FIRFilter.o: FIRFilter.h
+WindowFunction.o: WindowFunction.h
+plugins.o: TempogramPlugin.h FIRFilter.h WindowFunction.h
+plugins.o: NoveltyCurveProcessor.h SpectrogramProcessor.h
+plugins.o: AutocorrelationProcessor.h
+NoveltyCurveProcessor.o: NoveltyCurveProcessor.h FIRFilter.h WindowFunction.h
+NoveltyCurveProcessor.o: SpectrogramProcessor.h
+SpectrogramProcessor.o: SpectrogramProcessor.h
+AutocorrelationProcessor.o: AutocorrelationProcessor.h
+TempogramPlugin.o: FIRFilter.h WindowFunction.h NoveltyCurveProcessor.h
+TempogramPlugin.o: SpectrogramProcessor.h AutocorrelationProcessor.h
+NoveltyCurveProcessor.o: FIRFilter.h WindowFunction.h SpectrogramProcessor.h
