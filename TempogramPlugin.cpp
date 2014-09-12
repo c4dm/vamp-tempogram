@@ -60,33 +60,25 @@ TempogramPlugin::getName() const
 string
 TempogramPlugin::getDescription() const
 {
-    // Return something helpful here!
     return "Cyclic Tempogram as described by Peter Grosche and Meinard Muller";
 }
 
 string
 TempogramPlugin::getMaker() const
 {
-    //Your name here
     return "Carl Bussey";
 }
 
 int
 TempogramPlugin::getPluginVersion() const
 {
-    // Increment this each time you release a version that behaves
-    // differently from the previous one
     return 1;
 }
 
 string
 TempogramPlugin::getCopyright() const
 {
-    // This function is not ideally named.  It does not necessarily
-    // need to say who made the plugin -- getMaker does that -- but it
-    // should indicate the terms under which it is distributed.  For
-    // example, "Copyright (year). All Rights Reserved", or "GPL"
-    return "";
+    return "Copyright 2014 Queen Mary University of London. GPL licence.";
 }
 
 TempogramPlugin::InputDomain
