@@ -22,12 +22,12 @@ typedef std::vector< std::vector<float> > AutoCorrelation;
 
 class AutocorrelationProcessor{
 public:
-    AutocorrelationProcessor(const size_t &windowLength, const unsigned int &hopSize);
+    AutocorrelationProcessor(int windowLength, int hopSize);
     ~AutocorrelationProcessor();
-    AutoCorrelation process(float * input, const size_t &inputLength) const;
+    AutoCorrelation process(float * input, int inputLength) const;
 private:
-    size_t m_windowLength;
-    unsigned int m_hopSize;
+    int m_windowLength;
+    int m_hopSize;
 };
 
 #endif /* defined(__Tempogram__Autocorrelation__) */

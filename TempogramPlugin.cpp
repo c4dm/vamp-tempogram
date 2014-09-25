@@ -505,10 +505,14 @@ TempogramPlugin::getRemainingFeatures()
     
     for (int block = 0; block < tempogramLength; block++){
         Feature tempogramACTFeature;
+
+//	cerr << "block = " << block << ", window length = " << m_tempogramWindowLength << ", max lag = " << m_tempogramMaxLag << ", min lag = " << m_tempogramMinLag << endl;
         
         for(int k = m_tempogramMaxLag; k >= (int)m_tempogramMinLag; k--){
+//	    cerr << "(" << block << "," << k << ") ";
             tempogramACTFeature.values.push_back(tempogramACT[block][k]);
         }
+//	cerr << endl;
         tempogramACTFeature.hasTimestamp = false;
         featureSet[2].push_back(tempogramACTFeature);
     }
