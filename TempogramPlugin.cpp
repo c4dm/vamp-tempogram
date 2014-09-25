@@ -1,11 +1,18 @@
+/* -*- c-basic-offset: 4 indent-tabs-mode: nil -*-  vi:set ts=8 sts=4 sw=4: */
 
-// This is a skeleton file for use in creating your own plugin
-// libraries.  Replace MyPlugin and myPlugin throughout with the name
-// of your first plugin class, and fill in the gaps as appropriate.
-
+/*
+   Vamp Tempogram Plugin
+   Carl Bussey, Centre for Digital Music, Queen Mary University of London
+   Copyright 2014 Queen Mary University of London.
+    
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of the
+   License, or (at your option) any later version.  See the file
+   COPYING included with this distribution for more information.
+*/
 
 #include "TempogramPlugin.h"
-
 
 using Vamp::FFT;
 using Vamp::RealTime;
@@ -332,7 +339,7 @@ TempogramPlugin::getOutputDescriptors() const
     OutputDescriptor d1;
     d1.identifier = "cyclicTempogram";
     d1.name = "Cyclic Tempogram";
-    d1.description = "Cyclic Tempogram";
+    d1.description = "Cyclic tempogram calculated by \"octave folding\" the DFT tempogram";
     d1.unit = "";
     d1.hasFixedBinCount = true;
     d1.binCount = m_cyclicTempogramOctaveDivider > 0 && !isnan(m_cyclicTempogramOctaveDivider) ? m_cyclicTempogramOctaveDivider : 0;
@@ -347,8 +354,8 @@ TempogramPlugin::getOutputDescriptors() const
     OutputDescriptor d2;
     d2.identifier = "tempogramDFT";
     d2.name = "Tempogram via DFT";
-    d2.description = "Tempogram via DFT";
-    d2.unit = "BPM";
+    d2.description = "Tempogram calculated using Discrete Fourier Transform method";
+    d2.unit = ""; // unit of bin contents, not of "bin label", so not bpm
     d2.hasFixedBinCount = true;
     d2.binCount = m_tempogramMaxBin - m_tempogramMinBin + 1;
     d2.hasKnownExtents = false;
@@ -366,8 +373,8 @@ TempogramPlugin::getOutputDescriptors() const
     OutputDescriptor d3;
     d3.identifier = "tempogramACT";
     d3.name = "Tempogram via ACT";
-    d3.description = "Tempogram via ACT";
-    d3.unit = "BPM";
+    d3.description = "Tempogram calculated using autocorrelation method";
+    d3.unit = ""; // unit of bin contents, not of "bin label", so not bpm
     d3.hasFixedBinCount = true;
     d3.binCount = m_tempogramMaxLag - m_tempogramMinLag + 1;
     d3.hasKnownExtents = false;
@@ -384,7 +391,7 @@ TempogramPlugin::getOutputDescriptors() const
     OutputDescriptor d4;
     d4.identifier = "nc";
     d4.name = "Novelty Curve";
-    d4.description = "Novelty Curve";
+    d4.description = "Novelty curve underlying the tempogram calculations";
     d4.unit = "";
     d4.hasFixedBinCount = true;
     d4.binCount = 1;

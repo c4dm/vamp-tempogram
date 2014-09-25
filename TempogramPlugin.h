@@ -1,7 +1,16 @@
+/* -*- c-basic-offset: 4 indent-tabs-mode: nil -*-  vi:set ts=8 sts=4 sw=4: */
 
-// This is a skeleton file for use in creating your own plugin
-// libraries.  Replace MyPlugin and myPlugin throughout with the name
-// of your first plugin class, and fill in the gaps as appropriate.
+/*
+   Vamp Tempogram Plugin
+   Carl Bussey, Centre for Digital Music, Queen Mary University of London
+   Copyright 2014 Queen Mary University of London.
+    
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of the
+   License, or (at your option) any later version.  See the file
+   COPYING included with this distribution for more information.
+*/
 
 //* Should I use initialiseForGRF()? I generally think it's nicer to initialise stuff before processing. It just means that for some reason if somebody needs to process quickly (and have preparation time before) it's a bit easier on the load.
 //* I've taken this approach with NoveltyCurve, Spectrogram and FIRFilter too. Is this a good approach?
