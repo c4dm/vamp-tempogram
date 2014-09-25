@@ -635,7 +635,7 @@ bool TempogramPlugin::handleParameterValues(){
     }
     
     m_tempogramMinLag = max((int)ceil((60/(m_inputStepSize * m_tempogramMaxBPM))*m_inputSampleRate), 0);
-    m_tempogramMaxLag = min((int)floor((60/(m_inputStepSize * m_tempogramMinBPM))*m_inputSampleRate), (int)m_tempogramWindowLength);
+    m_tempogramMaxLag = min((int)floor((60/(m_inputStepSize * m_tempogramMinBPM))*m_inputSampleRate), (int)m_tempogramWindowLength-1);
 
     if (m_tempogramMaxLag < m_tempogramMinLag) {
 	cerr << "At audio sample rate " << m_inputSampleRate
