@@ -463,7 +463,7 @@ TempogramPlugin::getRemainingFeatures()
     
     //initialise novelty curve processor
     int numberOfBlocks = m_spectrogram.size();
-    //cerr << numberOfBlocks << endl;
+
     NoveltyCurveProcessor nc(m_inputSampleRate, m_inputBlockSize, m_noveltyCurveCompressionConstant);
     vector<float> noveltyCurve = nc.spectrogramToNoveltyCurve(m_spectrogram); //calculate novelty curvefrom magnitude data
     
@@ -506,13 +506,9 @@ TempogramPlugin::getRemainingFeatures()
     for (int block = 0; block < tempogramLength; block++){
         Feature tempogramACTFeature;
 
-//	cerr << "block = " << block << ", window length = " << m_tempogramWindowLength << ", max lag = " << m_tempogramMaxLag << ", min lag = " << m_tempogramMinLag << endl;
-        
         for(int k = m_tempogramMaxLag; k >= (int)m_tempogramMinLag; k--){
-//	    cerr << "(" << block << "," << k << ") ";
             tempogramACTFeature.values.push_back(tempogramACT[block][k]);
         }
-//	cerr << endl;
         tempogramACTFeature.hasTimestamp = false;
         featureSet[2].push_back(tempogramACTFeature);
     }
@@ -528,18 +524,7 @@ TempogramPlugin::getRemainingFeatures()
             float sum = 0;
             
             for (int j = 0; j < m_cyclicTempogramNumberOfOctaves; j++){
-
-		if (block >= tempogramDFT.size()) {
-		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": block " << block << " >= tempogramDFT.size() " << tempogramDFT.size() << endl;
-		} else if (j > logBins.size()) {
-		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": j " << j << " >= logBins.size() " << logBins.size() << endl;
-		} else if (i > logBins[j].size()) {
-		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": i " << i << " >= logBins[j].size() " << logBins[j].size() << endl;
-		} else if (logBins[j][i] >= tempogramDFT[block].size()) {
-		    cerr << "ERROR: at block = " << block << ", i = " << i << ", j = " << j << ": logBins[j][i] " << logBins[j][i] << " >= tempogramDFT[block].size() " << tempogramDFT[block].size() << endl;
-		} else {
-		    sum += tempogramDFT[block][logBins[j][i]];
-		}
+                sum += tempogramDFT[block][logBins[j][i]];
             }
             cyclicTempogramFeature.values.push_back(sum/m_cyclicTempogramNumberOfOctaves);
             assert(!isnan(cyclicTempogramFeature.values.back()));
@@ -556,23 +541,14 @@ vector< vector<unsigned int> > TempogramPlugin::calculateTempogramNearestNeighbo
 {
     vector< vector<unsigned int> > logBins;
     
-    cerr << "calculateTempogramNearestNeighbourLogBins: octaves = "
-         << m_cyclicTempogramNumberOfOctaves << endl;
-
     for (int octave = 0; octave < (int)m_cyclicTempogramNumberOfOctaves; octave++){
         vector<unsigned int> octaveBins;
-
-        cerr << "octave " << octave << ":" << endl;
 
         for (int bin = 0; bin < (int)m_cyclicTempogramOctaveDivider; bin++){
             float bpm = m_cyclicTempogramMinBPM*pow(2.0f, octave+(float)bin/m_cyclicTempogramOctaveDivider);
             octaveBins.push_back(bpmToBin(bpm));
-            cerr << bpmToBin(bpm) << " ";
-            //cout << octaveBins.back() << endl;
         }
-        cerr << endl;
         logBins.push_back(octaveBins);
-
     }
     
     return logBins;
@@ -658,11 +634,6 @@ bool TempogramPlugin::handleParameterValues(){
     
     m_cyclicTempogramMinBPM = max(binToBPM(m_tempogramMinBin), m_tempogramMinBPM);
     float cyclicTempogramMaxBPM = min(binToBPM(m_tempogramMaxBin), m_tempogramMaxBPM);
-
-    cerr << "tempogram min bpm = " << m_tempogramMinBPM << ", cyclic min = "
-         << m_cyclicTempogramMinBPM << endl;
-    cerr << "tempogram max bpm = " << m_tempogramMaxBPM << ", cyclic max = "
-         << cyclicTempogramMaxBPM << endl;
 
     m_cyclicTempogramNumberOfOctaves = floor(log2(cyclicTempogramMaxBPM/m_cyclicTempogramMinBPM));
 
