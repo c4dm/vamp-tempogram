@@ -577,7 +577,7 @@ unsigned int TempogramPlugin::bpmToBin(const float &bpm) const
     int bin = floor((float)m_tempogramFftLength*w/sampleRate + 0.5);
     
     if(bin < 0) bin = 0;
-    else if(bin > m_tempogramFftLength/2.0f) bin = m_tempogramFftLength;
+    else if(bin > m_tempogramFftLength/2.0f) bin = m_tempogramFftLength/2.0f;
     
     return bin;
 }
