@@ -556,15 +556,23 @@ vector< vector<unsigned int> > TempogramPlugin::calculateTempogramNearestNeighbo
 {
     vector< vector<unsigned int> > logBins;
     
+    cerr << "calculateTempogramNearestNeighbourLogBins: octaves = "
+         << m_cyclicTempogramNumberOfOctaves << endl;
+
     for (int octave = 0; octave < (int)m_cyclicTempogramNumberOfOctaves; octave++){
         vector<unsigned int> octaveBins;
-        
+
+        cerr << "octave " << octave << ":" << endl;
+
         for (int bin = 0; bin < (int)m_cyclicTempogramOctaveDivider; bin++){
             float bpm = m_cyclicTempogramMinBPM*pow(2.0f, octave+(float)bin/m_cyclicTempogramOctaveDivider);
             octaveBins.push_back(bpmToBin(bpm));
+            cerr << bpmToBin(bpm) << " ";
             //cout << octaveBins.back() << endl;
         }
+        cerr << endl;
         logBins.push_back(octaveBins);
+
     }
     
     return logBins;
@@ -648,8 +656,13 @@ bool TempogramPlugin::handleParameterValues(){
 	return false;
     }
     
-    m_cyclicTempogramMinBPM = m_tempogramMinBPM;
-    float cyclicTempogramMaxBPM = m_tempogramMaxBPM;
+    m_cyclicTempogramMinBPM = max(binToBPM(m_tempogramMinBin), m_tempogramMinBPM);
+    float cyclicTempogramMaxBPM = min(binToBPM(m_tempogramMaxBin), m_tempogramMaxBPM);
+
+    cerr << "tempogram min bpm = " << m_tempogramMinBPM << ", cyclic min = "
+         << m_cyclicTempogramMinBPM << endl;
+    cerr << "tempogram max bpm = " << m_tempogramMaxBPM << ", cyclic max = "
+         << cyclicTempogramMaxBPM << endl;
 
     m_cyclicTempogramNumberOfOctaves = floor(log2(cyclicTempogramMaxBPM/m_cyclicTempogramMinBPM));
 
