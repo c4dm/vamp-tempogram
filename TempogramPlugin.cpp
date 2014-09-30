@@ -241,16 +241,16 @@ TempogramPlugin::getParameterDescriptors() const
     list.push_back(d8);
     
     ParameterDescriptor d9;
-    d8.identifier = "refBPM";
-    d8.name = "Cyclic Tempogram Reference Tempo";
-    d8.description = "The reference tempo used when calculating the Cyclic Tempogram parameter \'s\'.";
-    d8.unit = "";
-    d8.minValue = 5;
-    d8.maxValue = 60;
-    d8.defaultValue = 30;
-    d8.isQuantized = true;
-    d8.quantizeStep = 1;
-    list.push_back(d8);
+    d9.identifier = "refBPM";
+    d9.name = "Cyclic Tempogram Reference Tempo";
+    d9.description = "The reference tempo used when calculating the Cyclic Tempogram parameter \'s\'.";
+    d9.unit = "";
+    d9.minValue = 5;
+    d9.maxValue = 60;
+    d9.defaultValue = 60;
+    d9.isQuantized = true;
+    d9.quantizeStep = 1;
+    list.push_back(d9);
 
     return list;
 }
