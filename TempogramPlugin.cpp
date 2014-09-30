@@ -369,13 +369,10 @@ TempogramPlugin::getOutputDescriptors() const
     d1.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0;
     vector< vector <unsigned int> > logBins = calculateTempogramNearestNeighbourLogBins();
     if (!logBins.empty()){
-        float scale = pow(2,floor(60/logBins[0][0]));
-        
-        cerr << m_cyclicTempogramOctaveDivider << endl;
-        for(int i = 0; i < m_cyclicTempogramNumberOfOctaves; i++){
-            float s = fmod(binToBPM(logBins[0][i]), m_cyclicTempogramReferenceBPM)*scale;
+        float scale = pow(2,ceil(log2(60/binToBPM(logBins[0][0]))));
+        for(int i = 0; i < m_cyclicTempogramOctaveDivider; i++){
+            float s = scale*binToBPM(logBins[0][i])/m_cyclicTempogramReferenceBPM;
             d1.binNames.push_back(floatToString(s));
-            cerr << i << endl;
             //cerr << m_cyclicTempogramOctaveDivider  << " " << s << endl;
         }
     }
