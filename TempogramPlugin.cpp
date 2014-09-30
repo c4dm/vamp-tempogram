@@ -239,6 +239,18 @@ TempogramPlugin::getParameterDescriptors() const
     d8.isQuantized = true;
     d8.quantizeStep = 1;
     list.push_back(d8);
+    
+    ParameterDescriptor d9;
+    d8.identifier = "refBPM";
+    d8.name = "Cyclic Tempogram Reference Tempo";
+    d8.description = "The reference tempo used when calculating the Cyclic Tempogram parameter \'s\'.";
+    d8.unit = "";
+    d8.minValue = 5;
+    d8.maxValue = 60;
+    d8.defaultValue = 30;
+    d8.isQuantized = true;
+    d8.quantizeStep = 1;
+    list.push_back(d8);
 
     return list;
 }
@@ -269,6 +281,9 @@ TempogramPlugin::getParameter(string identifier) const
     }
     else if (identifier == "octDiv"){
         return m_cyclicTempogramOctaveDivider;
+    }
+    else if (identifier == "refBPM"){
+        return m_cyclicTempogramReferenceBPM;
     }
     
     return 0;
@@ -301,6 +316,9 @@ TempogramPlugin::setParameter(string identifier, float value)
     }
     else if (identifier == "octDiv"){
         m_cyclicTempogramOctaveDivider = value;
+    }
+    else if (identifier == "refBPM"){
+        m_cyclicTempogramReferenceBPM = value;
     }
     
 }
@@ -349,6 +367,18 @@ TempogramPlugin::getOutputDescriptors() const
     d1.sampleType = OutputDescriptor::FixedSampleRate;
     d_sampleRate = tempogramInputSampleRate/m_tempogramHopSize;
     d1.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0;
+    vector< vector <unsigned int> > logBins = calculateTempogramNearestNeighbourLogBins();
+    if (!logBins.empty()){
+        float scale = pow(2,floor(60/logBins[0][0]));
+        
+        cerr << m_cyclicTempogramOctaveDivider << endl;
+        for(int i = 0; i < m_cyclicTempogramNumberOfOctaves; i++){
+            float s = fmod(binToBPM(logBins[0][i]), m_cyclicTempogramReferenceBPM)*scale;
+            d1.binNames.push_back(floatToString(s));
+            cerr << i << endl;
+            //cerr << m_cyclicTempogramOctaveDivider  << " " << s << endl;
+        }
+    }
     d1.hasDuration = false;
     list.push_back(d1);
     
