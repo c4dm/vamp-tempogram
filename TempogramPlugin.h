@@ -115,6 +115,7 @@ protected:
     float m_cyclicTempogramMinBPM;
     int m_cyclicTempogramNumberOfOctaves;
     int m_cyclicTempogramOctaveDivider;
+    float m_cyclicTempogramReferenceBPM;
 
     string floatToString(float value) const;
     vector< vector<unsigned int> > calculateTempogramNearestNeighbourLogBins() const;

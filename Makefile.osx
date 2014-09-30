@@ -19,18 +19,18 @@ CFLAGS		:= -Wall -Wextra -g -fPIC
 
 # Flags to determine processor architecture and system SDK
 
-ARCHFLAGS	?= -mmacosx-version-min=10.6 -arch x86_64 -arch i386
+ARCHFLAGS	?= -mmacosx-version-min=10.6 -arch x86_64
 
 
 # Location of Vamp plugin SDK relative to the project directory
 
-VAMPSDK_DIR	:= ../vamp-plugin-sdk
+VAMPSDK_DIR	:= /usr/local/include
 
 
 # Libraries and linker flags required by plugin: add any -l<library>
 # options here
 
-PLUGIN_LDFLAGS	:= -dynamiclib -exported_symbols_list vamp-plugin.list $(VAMPSDK_DIR)/libvamp-sdk.a
+PLUGIN_LDFLAGS	:= -dynamiclib -exported_symbols_list vamp-plugin.list /usr/local/lib/libvamp-sdk.a
 
 
 # File extension for plugin library on this platform
