@@ -40,7 +40,7 @@ TempogramPlugin::TempogramPlugin(float inputSampleRate) :
     m_cyclicTempogramMinBPM(30), //reset in initialise()
     m_cyclicTempogramNumberOfOctaves(0), //set in initialise()
     m_cyclicTempogramOctaveDivider(30), //parameter
-    m_cyclicTempogramReferenceBPM(60)
+    m_cyclicTempogramReferenceBPM(60) //parameter
 
     // Also be sure to set your plugin parameters (presumably stored
     // in member variables) to their default values here -- the host
@@ -239,18 +239,6 @@ TempogramPlugin::getParameterDescriptors() const
     d8.isQuantized = true;
     d8.quantizeStep = 1;
     list.push_back(d8);
-    
-    ParameterDescriptor d9;
-    d9.identifier = "refBPM";
-    d9.name = "Cyclic Tempogram Reference BPM";
-    d9.description = "The reference BPM used when calculating the parameter \'s\' of the cyclic tempogram.";
-    d9.unit = "";
-    d9.minValue = 30;
-    d9.maxValue = 240;
-    d9.defaultValue = 60;
-    d9.isQuantized = true;
-    d9.quantizeStep = 1;
-    list.push_back(d9);
 
     return list;
 }
@@ -281,9 +269,6 @@ TempogramPlugin::getParameter(string identifier) const
     }
     else if (identifier == "octDiv"){
         return m_cyclicTempogramOctaveDivider;
-    }
-    else if (identifier == "refBPM"){
-        return m_cyclicTempogramReferenceBPM;
     }
     
     return 0;
@@ -316,9 +301,6 @@ TempogramPlugin::setParameter(string identifier, float value)
     }
     else if (identifier == "octDiv"){
         m_cyclicTempogramOctaveDivider = value;
-    }
-    else if (identifier == "refBPM"){
-        m_cyclicTempogramReferenceBPM = value;
     }
     
 }
@@ -367,14 +349,6 @@ TempogramPlugin::getOutputDescriptors() const
     d1.sampleType = OutputDescriptor::FixedSampleRate;
     d_sampleRate = tempogramInputSampleRate/m_tempogramHopSize;
     d1.sampleRate = d_sampleRate > 0.0 && !isnan(d_sampleRate) ? d_sampleRate : 0;
-    vector< vector<unsigned int> > logBins = calculateTempogramNearestNeighbourLogBins();
-    if (!logBins.empty()){
-        //assert((int)logBins[0].size() == m_cyclicTempogramOctaveDivider);
-        for(int i = 0; i < (int)m_cyclicTempogramOctaveDivider; i++){
-            //float s = binToBPM(logBins[0][i])/m_cyclicTempogramReferenceBPM;
-            //d1.binNames.push_back(floatToString(s));
-        }
-    }
     d1.hasDuration = false;
     list.push_back(d1);
     
