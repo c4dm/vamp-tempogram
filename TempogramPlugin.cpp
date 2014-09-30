@@ -245,8 +245,8 @@ TempogramPlugin::getParameterDescriptors() const
     d9.name = "Cyclic Tempogram Reference Tempo";
     d9.description = "The reference tempo used when calculating the Cyclic Tempogram parameter \'s\'.";
     d9.unit = "";
-    d9.minValue = 5;
-    d9.maxValue = 60;
+    d9.minValue = 30;
+    d9.maxValue = 120;
     d9.defaultValue = 60;
     d9.isQuantized = true;
     d9.quantizeStep = 1;
