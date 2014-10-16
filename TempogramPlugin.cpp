@@ -68,7 +68,7 @@ TempogramPlugin::getName() const
 string
 TempogramPlugin::getDescription() const
 {
-    return "Cyclic Tempogram as described by Peter Grosche and Meinard Muller";
+    return "Tempogram and Cyclic Tempogram as described by Peter Grosche and Meinard Müller";
 }
 
 string
