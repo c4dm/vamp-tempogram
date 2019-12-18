@@ -14,6 +14,8 @@
 
 #include "TempogramPlugin.h"
 
+#include <algorithm>
+
 using Vamp::FFT;
 using Vamp::RealTime;
 using namespace std;
@@ -361,7 +363,7 @@ TempogramPlugin::getOutputDescriptors() const
     d1.description = "Cyclic tempogram calculated by \"octave folding\" the DFT tempogram";
     d1.unit = "";
     d1.hasFixedBinCount = true;
-    d1.binCount = m_cyclicTempogramOctaveDivider > 0 && !isnan(m_cyclicTempogramOctaveDivider) ? m_cyclicTempogramOctaveDivider : 0;
+    d1.binCount = m_cyclicTempogramOctaveDivider > 0 ? m_cyclicTempogramOctaveDivider : 0;
     d1.hasKnownExtents = false;
     d1.isQuantized = false;
     d1.sampleType = OutputDescriptor::FixedSampleRate;
